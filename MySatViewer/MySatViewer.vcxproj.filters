@@ -1,0 +1,45 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{1f6662c5-c438-42f1-ad22-53a39b5b523b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="headers">
+      <UniqueIdentifier>{7a629299-3cad-4983-ba0a-5368c34bbb91}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="glad.c">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="camera.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="mesh.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="model.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="shader_s.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="stl_reader.h">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="json.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+    <ClInclude Include="argpaser.hpp">
+      <Filter>headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
