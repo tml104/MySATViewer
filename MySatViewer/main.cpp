@@ -1,3 +1,5 @@
+// MySatViewer.exe -m 2 ./models/C_ent(1)_stl_1.stl ./models/C_ent(1)_geometry_json_.json
+
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
@@ -200,7 +202,6 @@ int main(int argc, char const* argv[])
                 show_another_window = false;
             ImGui::End();
         }
-
 
         // per-frame time logic
         float currentFrame = static_cast<float>(glfwGetTime());
