@@ -458,10 +458,10 @@ namespace util
             {
                 pos = find_named_argument(name);
             }
-            if (pos == named_arguments.cend())
-            {
-                get_error("argument not found: " + name);
-            }
+            //if (pos == named_arguments.cend())
+            //{
+            //    get_error("argument not found: " + name);
+            //}
             auto ptr = dynamic_cast<argument<T> *>(pos->get());
             if (ptr == nullptr)
             {

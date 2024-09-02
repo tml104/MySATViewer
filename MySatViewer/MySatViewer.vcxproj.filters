@@ -10,6 +10,9 @@
     <Filter Include="imgui">
       <UniqueIdentifier>{c55d137d-a711-48f0-aeef-c72e321c9f9b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MyEngine">
+      <UniqueIdentifier>{8fe4b4d3-a77c-4186-b825-9b64493b3cf6}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -39,6 +42,7 @@
     <ClCompile Include="..\imgui\misc\cpp\imgui_stdlib.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
+    <ClCompile Include="..\imgui\backends\imgui_impl_glfw.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -62,7 +66,7 @@
     <ClInclude Include="json.hpp">
       <Filter>headers</Filter>
     </ClInclude>
-    <ClInclude Include="argpaser.hpp">
+    <ClInclude Include="argparser.hpp">
       <Filter>headers</Filter>
     </ClInclude>
     <ClInclude Include="..\imgui\imconfig.h">
@@ -91,6 +95,10 @@
     </ClInclude>
     <ClInclude Include="..\imgui\misc\cpp\imgui_stdlib.h">
       <Filter>imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="MyRenderEngine.hpp">
+      <Filter>MyEngine</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
