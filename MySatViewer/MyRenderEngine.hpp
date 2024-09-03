@@ -6,15 +6,18 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <unordered_map>
+#include <unordered_set>
+#include <set>
+#include <vector>
+#include <cmath>
 
 #include "shader_s.h"
 #include "camera.h"
 
-#include "model.h"
-#include "mesh.h"
-
 #include "stl_reader.h"
 #include "json.hpp"
+#include "tiny_obj_loader.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -168,6 +171,102 @@ namespace MyRenderEngine {
 				edgeMap[marknum] = { ii++, marknum, body_id, nonmanifold_count, mid_pos };
 			}
 		}
+	};
+
+	//class ObjInfo {
+	//public:
+	//	std::vector<float> vertices;
+	//	std::vector<unsigned int> indices;
+
+	//	void LoadObj(const std::string& obj_path) {
+	//		Assimp::Importer importer;
+	//		const aiScene* scene = importer.ReadFile(obj_path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
+	//		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
+	//			throw std::runtime_error(importer.GetErrorString());
+	//			return;
+	//		}
+
+	//		ProcessNode(scene->mRootNode, scene);
+	//	}
+
+	//private:
+	//	void ProcessNode(aiNode* node, const aiScene* scene) {
+	//		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
+	//			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+	//			ProcessMesh(mesh, scene);
+	//		}
+
+	//		for (unsigned int i = 0; i < node->mNumChildren; i++)
+	//		{
+	//			ProcessNode(node->mChildren[i], scene);
+	//		}
+	//	}
+
+	//	void ProcessMesh(aiMesh* mesh, const aiScene* scene) {
+	//		for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
+	//			vertices.emplace_back(mesh->mVertices[i].x);
+	//			vertices.emplace_back(mesh->mVertices[i].y);
+	//			vertices.emplace_back(mesh->mVertices[i].z);
+	//		}
+
+	//		for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
+	//			aiFace face = mesh->mFaces[i];
+	//			for (unsigned int j = 0; j < face.mNumIndices; j++) {
+	//				indices.emplace_back(face.mIndices[j]);
+	//			}
+	//		}
+	//	}
+	//};
+
+	class ObjInfo {
+	public:
+		std::vector<float> vertices;
+		std::vector<unsigned int> indices;
+
+		void LoadObj(const std::string& obj_path) {
+			tinyobj::ObjReader reader;
+
+			if (!reader.ParseFromFile(obj_path)) {
+				if (!reader.Error().empty()) {
+					std::cerr << "TinyObjReader: " << reader.Error();
+				}
+				throw::runtime_error("TinyObjReader read failed.");
+			}
+
+			if (!reader.Warning().empty()) {
+				std::cout << "TinyObjReader: " << reader.Warning();
+			}
+
+			auto& attrib = reader.GetAttrib();
+			auto& shapes = reader.GetShapes();
+			//auto& materials = reader.GetMaterials();
+
+			vertices = attrib.vertices; // 复制
+
+			for (size_t s = 0; s < shapes.size(); s++) {
+				// Loop over faces(polygon)
+				size_t index_offset = 0;
+				for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+					size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]); // 3
+					assert(fv == 3);
+
+					// Loop over vertices in the face.
+					for (size_t v = 0; v < fv; v++) {
+						// access to vertex
+						tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+						//tinyobj::real_t vx = attrib.vertices[3 * size_t(idx.vertex_index) + 0];
+						//tinyobj::real_t vy = attrib.vertices[3 * size_t(idx.vertex_index) + 1];
+						//tinyobj::real_t vz = attrib.vertices[3 * size_t(idx.vertex_index) + 2];
+
+						indices.emplace_back(idx.vertex_index);
+					}
+					index_offset += fv;
+				}
+			}
+			std::cout << "OBJ vertices size: " << vertices.size() << std::endl;
+			std::cout << "OBJ indices size: " << indices.size() << std::endl;
+		}
+
 	};
 
 	struct RenderInfo {
@@ -535,7 +634,7 @@ namespace MyRenderEngine {
 		}
 
 		MyRenderEngine(): 
-			camera(glm::vec3{100.0f, 100.0f, 100.0f}),
+			camera(glm::vec3{1.0f}),
 			mouseController(camera),
 			keyboardController(camera, showModel),
 			deltaTime(0.0f),
@@ -658,5 +757,312 @@ namespace MyRenderEngine {
 
 	private:
 		MyRenderEngine& myRenderEngine;
+	};
+
+
+	class ObjRenderer : public IRenderable {
+	public:
+		ObjInfo& objInfo;
+
+		unsigned int VAO;
+		unsigned int VBO;
+		unsigned int EBO;
+		Shader shader;
+
+		void Setup() {
+			glGenVertexArrays(1, &VAO);
+			glGenBuffers(1, &VBO);
+			glGenBuffers(1, &EBO);
+
+			glBindVertexArray(VAO);
+			glBindBuffer(GL_ARRAY_BUFFER, VBO);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(float) * objInfo.vertices.size(), objInfo.vertices.data(), GL_STATIC_DRAW);
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * objInfo.indices.size(), objInfo.indices.data(), GL_STATIC_DRAW);
+
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+			glBindVertexArray(0);
+		}
+
+		void Render(
+			const RenderInfo& renderInfo
+		) override {
+			shader.use();
+
+			shader.setMatrix4("projection", renderInfo.projection_matrix);
+			shader.setMatrix4("view", renderInfo.view_matrix);
+			shader.setMatrix4("model", renderInfo.model_matrix);
+
+			glBindVertexArray(VAO);
+			glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(objInfo.indices.size()), GL_UNSIGNED_INT, 0);
+			glBindVertexArray(0);
+		}
+
+
+		ObjRenderer(ObjInfo& objInfo, Shader&& shader): objInfo(objInfo), shader(std::move(shader)) {}
+		~ObjRenderer() {}
+	};
+
+	class ObjLineRenderer : public IRenderable {
+	public:
+		ObjInfo& objInfo;
+
+		std::vector<float> yelllow_lines;
+		std::vector<float> green_lines;
+		std::vector<float> red_lines;
+
+		unsigned int yellowVAO;
+		unsigned int yellowVBO;
+
+		unsigned int greenVAO;
+		unsigned int greenVBO;
+
+		unsigned int redVAO;
+		unsigned int redVBO;
+
+		Shader shader;
+
+		void Setup() {
+
+			std::set<std::pair<int, int>> ps;
+			std::map<std::pair<int, int>, glm::vec3> color_map;
+			int red_count = 0;
+			int yellow_count = 0;
+
+			auto swap_pair = [](std::pair<int, int> p) {
+				if (p.first > p.second) {
+					std::swap(p.first, p.second);
+				}
+			};
+
+			auto add_point_and_color = [&](std::pair<int, int> p, glm::vec3 point1, glm::vec3 point2, glm::vec3 color) {
+				if (ps.count(p) == 0) {
+
+					if (color == glm::vec3{ 1.0f, 1.0f, 0.0f }) { // Y
+						yellow_count++;
+						yelllow_lines.emplace_back(point1.x);
+						yelllow_lines.emplace_back(point1.y);
+						yelllow_lines.emplace_back(point1.z);
+						yelllow_lines.emplace_back(color.x);
+						yelllow_lines.emplace_back(color.y);
+						yelllow_lines.emplace_back(color.z);
+
+
+						yelllow_lines.emplace_back(point2.x);
+						yelllow_lines.emplace_back(point2.y);
+						yelllow_lines.emplace_back(point2.z);
+						yelllow_lines.emplace_back(color.x);
+						yelllow_lines.emplace_back(color.y);
+						yelllow_lines.emplace_back(color.z);
+					}
+					else if (color == glm::vec3{ 1.0f, 0.0f, 0.0f }){ // R
+						red_count++;
+
+						red_lines.emplace_back(point1.x);
+						red_lines.emplace_back(point1.y);
+						red_lines.emplace_back(point1.z);
+						red_lines.emplace_back(color.x);
+						red_lines.emplace_back(color.y);
+						red_lines.emplace_back(color.z);
+
+
+						red_lines.emplace_back(point2.x);
+						red_lines.emplace_back(point2.y);
+						red_lines.emplace_back(point2.z);
+						red_lines.emplace_back(color.x);
+						red_lines.emplace_back(color.y);
+						red_lines.emplace_back(color.z);
+					}
+					else {
+						green_lines.emplace_back(point1.x);
+						green_lines.emplace_back(point1.y);
+						green_lines.emplace_back(point1.z);
+						green_lines.emplace_back(color.x);
+						green_lines.emplace_back(color.y);
+						green_lines.emplace_back(color.z);
+
+						green_lines.emplace_back(point2.x);
+						green_lines.emplace_back(point2.y);
+						green_lines.emplace_back(point2.z);
+						green_lines.emplace_back(color.x);
+						green_lines.emplace_back(color.y);
+						green_lines.emplace_back(color.z);
+					}
+
+					ps.insert(p);
+				}
+			};
+
+			auto get_color = [&](std::pair<int, int> p, glm::vec3 point1, glm::vec3 point2, glm::vec3 point3) -> glm::vec3 {
+				glm::vec3 color{ 0.0f, 1.0f, 0.0f }; // G
+
+				// 距离
+				float dis = glm::distance(point1, point2);
+				if (dis < 0.001) {
+					color = glm::vec3{ 1.0f, 0.0f, 0.0f }; // R
+					std::cout << "dis: " << dis << std::endl;
+				}
+
+				// 角度
+				glm::vec3 v1 = point1 - point3;
+				glm::vec3 v2 = point2 - point3;
+				float dot_value = glm::dot(v1, v2);
+
+				float angle = acos(dot_value / (glm::length(v1) * glm::length(v2))) * 180.0f / M_PI;
+
+				if (angle > 150.0) {
+					color = glm::vec3{ 1.0f, 1.0f, 0.0f }; // Y
+					std::cout << "angle: "<< angle << std::endl;
+				}
+
+				return color;
+			};
+
+			auto assign_color = [&](std::pair<int, int> p, glm::vec3 point1, glm::vec3 point2, glm::vec3 point3) {
+				if (color_map.find(p) == color_map.end() || color_map[p] == glm::vec3{ 0.0f, 1.0f, 0.0f }) {
+					color_map[p] = get_color(p, point1, point2, point3);
+				}
+			};
+
+			// 标记颜色
+			for (int i = 0; i < objInfo.indices.size(); i += 3) {
+				int j = i + 1;
+				int k = i + 2;
+
+				int ii = objInfo.indices[i];
+				int jj = objInfo.indices[j];
+				int kk = objInfo.indices[k];
+
+				glm::vec3 point1{
+					objInfo.vertices[3 * (ii)+0],
+					objInfo.vertices[3 * (ii)+1],
+					objInfo.vertices[3 * (ii)+2]
+				};
+
+				glm::vec3 point2{
+					objInfo.vertices[3 * (jj)+0],
+					objInfo.vertices[3 * (jj)+1],
+					objInfo.vertices[3 * (jj)+2]
+				};
+
+				glm::vec3 point3{
+					objInfo.vertices[3 * (kk)+0],
+					objInfo.vertices[3 * (kk)+1],
+					objInfo.vertices[3 * (kk)+2]
+				};
+
+				auto p1 = std::make_pair(ii, jj);
+				auto p2 = std::make_pair(jj, kk);
+				auto p3 = std::make_pair(ii, kk);
+
+				swap_pair(p1); // 1, 2
+				swap_pair(p2); // 2, 3
+				swap_pair(p3); // 1, 3
+
+				assign_color(p1, point1, point2, point3);
+				assign_color(p2, point2, point3, point1);
+				assign_color(p3, point1, point3, point2);
+				
+			}
+
+			for (int i = 0; i < objInfo.indices.size(); i+=3) {
+				int j = i + 1;
+				int k = i + 2;
+
+				int ii = objInfo.indices[i];
+				int jj = objInfo.indices[j];
+				int kk = objInfo.indices[k];
+
+				glm::vec3 point1{
+					objInfo.vertices[3 * (ii)+0],
+					objInfo.vertices[3 * (ii)+1],
+					objInfo.vertices[3 * (ii)+2]
+				};
+
+				glm::vec3 point2{
+					objInfo.vertices[3 * (jj)+0],
+					objInfo.vertices[3 * (jj)+1],
+					objInfo.vertices[3 * (jj)+2]
+				};
+
+				glm::vec3 point3{
+					objInfo.vertices[3 * (kk)+0],
+					objInfo.vertices[3 * (kk)+1],
+					objInfo.vertices[3 * (kk)+2]
+				};
+
+				auto p1 = std::make_pair(ii, jj);
+				auto p2 = std::make_pair(jj, kk);
+				auto p3 = std::make_pair(ii, kk);
+
+				swap_pair(p1);
+				swap_pair(p2);
+				swap_pair(p3);
+
+				add_point_and_color(p1, point1, point2, color_map[p1]);
+				add_point_and_color(p2, point2, point3, color_map[p2]);
+				add_point_and_color(p3, point1, point3, color_map[p3]);
+
+			}
+
+			std::cout << "yellow count: " << yellow_count << std::endl;
+			std::cout << "red count: " << red_count << std::endl;
+
+			auto set_vao = [&](unsigned int& VAO, unsigned int& VBO, std::vector<float>& lines) {
+				glGenVertexArrays(1, &VAO);
+				glGenBuffers(1, &VBO);
+				//glGenBuffers(1, &EBO);
+
+				glBindVertexArray(VAO);
+				glBindBuffer(GL_ARRAY_BUFFER, VBO);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(float) * lines.size(), lines.data(), GL_STATIC_DRAW);
+
+				//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+				//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * objInfo.indices.size(), objInfo.indices.data(), GL_STATIC_DRAW);
+
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+
+				glBindVertexArray(0);
+			};
+
+			set_vao(yellowVAO, yellowVBO, yelllow_lines);
+			set_vao(redVAO, redVBO, red_lines);
+			set_vao(greenVAO, greenVBO, green_lines);
+
+		}
+
+		void Render(
+			const RenderInfo& renderInfo
+		) override {
+			shader.use();
+
+			shader.setMatrix4("projection", renderInfo.projection_matrix);
+			shader.setMatrix4("view", renderInfo.view_matrix);
+			shader.setMatrix4("model", renderInfo.model_matrix);
+
+			/*glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(objInfo.indices.size()), GL_UNSIGNED_INT, 0);*/
+
+			glBindVertexArray(yellowVAO);
+			glDrawArrays(GL_LINES, 0, yelllow_lines.size()/6);
+			glBindVertexArray(0);
+
+			glBindVertexArray(redVAO);
+			glDrawArrays(GL_LINES, 0, red_lines.size() / 6);
+			glBindVertexArray(0);
+
+			glBindVertexArray(greenVAO);
+			glDrawArrays(GL_LINES, 0, green_lines.size() / 6);
+			glBindVertexArray(0);
+
+		}
+
+
+		ObjLineRenderer(ObjInfo& objInfo, Shader&& shader) : objInfo(objInfo), shader(std::move(shader)) {}
+		~ObjLineRenderer() {}
 	};
 } // namespace MyRenderEngine

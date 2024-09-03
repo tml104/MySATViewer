@@ -142,6 +142,7 @@
     <ClCompile Include="..\imgui\misc\cpp\imgui_stdlib.cpp" />
     <ClCompile Include="glad.c" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="tiny_obj_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui\backends\imgui_impl_glfw.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="shader_s.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stl_reader.h" />
+    <ClInclude Include="tiny_obj_loader.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\imgui\misc\debuggers\imgui.natstepfilter" />

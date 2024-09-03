@@ -43,6 +43,9 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="tiny_obj_loader.cpp">
+      <Filter>headers</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="camera.h">
@@ -99,6 +102,9 @@
     <ClInclude Include="..\imgui\backends\imgui_impl_glfw.h" />
     <ClInclude Include="MyRenderEngine.hpp">
       <Filter>MyEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="tiny_obj_loader.h">
+      <Filter>headers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

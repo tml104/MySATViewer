@@ -42,12 +42,14 @@ int main(int argc, char const* argv[])
         .use_color_error()
         .add_sc_option("-v", "--version", "show version info", []() {std::cout << "MySatViewer version" << VERSION << std::endl; })
         .add_option<int>("-m", "--model", "Which body you want to show for lines.", -1)
+        .add_option<std::string>("-o", "--obj", "Load Obj", "")
         .add_argument<std::string>("stl_model_path", "stl model path")
         .add_argument<std::string>("geometry_json_path", "geometry json path")
         .parse(argc, argv);
 
     int selected_body = args_parser.get_option<int>("-m");
     //int tp_to_edge = args_parser.get_option<int>("-t");
+    std::string obj_path = args_parser.get_option<std::string>("-o");
     std::string stl_model_path = args_parser.get_argument<std::string>("stl_model_path");
     std::string geometry_json_path = args_parser.get_argument<std::string>("geometry_json_path");
 
@@ -57,23 +59,51 @@ int main(int argc, char const* argv[])
     MyRenderEngine::MyRenderEngine myRenderEngine;
     
     Shader stlShader("./shaders/MySat/flatShader.vs", "./shaders/MySat/flatShader.fs");
+    Shader objShader("./shaders/MySat/objShader.vs", "./shaders/MySat/objShader.fs");
+    Shader objLineShader("./shaders/MySat/objLineShader.vs", "./shaders/MySat/objLineShader.fs");
     Shader lineShader("./shaders/MySat/lineShader.vs", "./shaders/MySat/lineShader.fs");
 
     MyRenderEngine::SatInfo satInfo;
-    satInfo.LoadStl(stl_model_path);
-    satInfo.LoadGeometryJson(geometry_json_path, selected_body);
-    myRenderEngine.SetCameraPos(satInfo.newCameraPos);
 
-    auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(std::move(stlShader));
-    satStlRendererPtr->LoadFromSatInfo(satInfo);
-    myRenderEngine.AddRenderable(satStlRendererPtr);
+    MyRenderEngine::ObjInfo objInfo;
 
-    auto satLineRendererPtr = std::make_shared<MyRenderEngine::SatLineRenderer>(std::move(lineShader));
-    satLineRendererPtr->LoadFromSatInfo(satInfo);
-    myRenderEngine.AddRenderable(satLineRendererPtr);
+    if (obj_path != "") {
+        std::cout << "Loading OBJ: " << obj_path << std::endl;
+        objInfo.LoadObj(obj_path); // 注意这个对象的生命周期，因为目前objRendererPtr是通过引用的方式拿信息的！
+        std::cout << "Loading OBJ Done." << std::endl;
 
-    auto myGuiRendererPtr = std::make_shared<MyRenderEngine::MyGuiRenderer>(satInfo, myRenderEngine);
-    myRenderEngine.AddRenderable(myGuiRendererPtr);
+        //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,std::move(objShader));
+        //objRendererPtr->Setup();
+        //myRenderEngine.AddRenderable(objRendererPtr);
+
+        myRenderEngine.camera.MovementSpeed = 1.0f;
+
+        auto objLineRendererPtr = std::make_shared<MyRenderEngine::ObjLineRenderer>(objInfo, std::move(objLineShader));
+        objLineRendererPtr->Setup();
+        myRenderEngine.AddRenderable(objLineRendererPtr);
+    }
+    else {
+        std::cout << "Loading STL: " << stl_model_path << std::endl;
+        satInfo.LoadStl(stl_model_path);
+        std::cout << "Loading STL Done." << std::endl;
+
+        std::cout << "Loading GeometryJson: " << geometry_json_path << std::endl;
+        satInfo.LoadGeometryJson(geometry_json_path, selected_body);
+        std::cout << "Loading GeometryJson Done." << std::endl;
+
+        myRenderEngine.SetCameraPos(satInfo.newCameraPos);
+
+        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(std::move(stlShader));
+        satStlRendererPtr->LoadFromSatInfo(satInfo);
+        myRenderEngine.AddRenderable(satStlRendererPtr);
+
+        auto satLineRendererPtr = std::make_shared<MyRenderEngine::SatLineRenderer>(std::move(lineShader));
+        satLineRendererPtr->LoadFromSatInfo(satInfo);
+        myRenderEngine.AddRenderable(satLineRendererPtr);
+
+        auto myGuiRendererPtr = std::make_shared<MyRenderEngine::MyGuiRenderer>(satInfo, myRenderEngine);
+        myRenderEngine.AddRenderable(myGuiRendererPtr);
+    }
 
     myRenderEngine.StartRenderLoop();
 
