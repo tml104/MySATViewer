@@ -173,51 +173,6 @@ namespace MyRenderEngine {
 		}
 	};
 
-	//class ObjInfo {
-	//public:
-	//	std::vector<float> vertices;
-	//	std::vector<unsigned int> indices;
-
-	//	void LoadObj(const std::string& obj_path) {
-	//		Assimp::Importer importer;
-	//		const aiScene* scene = importer.ReadFile(obj_path, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_CalcTangentSpace);
-	//		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode) {
-	//			throw std::runtime_error(importer.GetErrorString());
-	//			return;
-	//		}
-
-	//		ProcessNode(scene->mRootNode, scene);
-	//	}
-
-	//private:
-	//	void ProcessNode(aiNode* node, const aiScene* scene) {
-	//		for (unsigned int i = 0; i < node->mNumMeshes; i++) {
-	//			aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-	//			ProcessMesh(mesh, scene);
-	//		}
-
-	//		for (unsigned int i = 0; i < node->mNumChildren; i++)
-	//		{
-	//			ProcessNode(node->mChildren[i], scene);
-	//		}
-	//	}
-
-	//	void ProcessMesh(aiMesh* mesh, const aiScene* scene) {
-	//		for (unsigned int i = 0; i < mesh->mNumVertices; i++) {
-	//			vertices.emplace_back(mesh->mVertices[i].x);
-	//			vertices.emplace_back(mesh->mVertices[i].y);
-	//			vertices.emplace_back(mesh->mVertices[i].z);
-	//		}
-
-	//		for (unsigned int i = 0; i < mesh->mNumFaces; i++) {
-	//			aiFace face = mesh->mFaces[i];
-	//			for (unsigned int j = 0; j < face.mNumIndices; j++) {
-	//				indices.emplace_back(face.mIndices[j]);
-	//			}
-	//		}
-	//	}
-	//};
-
 	class ObjInfo {
 	public:
 		std::vector<float> vertices;

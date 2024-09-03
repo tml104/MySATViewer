@@ -48,7 +48,6 @@ int main(int argc, char const* argv[])
         .parse(argc, argv);
 
     int selected_body = args_parser.get_option<int>("-m");
-    //int tp_to_edge = args_parser.get_option<int>("-t");
     std::string obj_path = args_parser.get_option<std::string>("-o");
     std::string stl_model_path = args_parser.get_argument<std::string>("stl_model_path");
     std::string geometry_json_path = args_parser.get_argument<std::string>("geometry_json_path");
