@@ -682,7 +682,17 @@ namespace MyRenderEngine {
 			ImGui::Begin("SAT Edges Info");
 			if (ImGui::TreeNode("Edges")) {
 				int i = 0;
-				for (auto [edge_marknum, edge_info] : satInfo.edgeMap) {
+
+				// 按照edge编号排序
+				// TODO: 可以优化
+				std::vector<std::pair<int, EdgeInfo>> edges_info;
+				for (auto&& [edge_marknum, edge_info] : satInfo.edgeMap) {
+					edges_info.emplace_back(edge_marknum, edge_info);
+				}
+
+				std::sort(edges_info.begin(), edges_info.end(), [](const std::pair<int, EdgeInfo>& a, const std::pair<int, EdgeInfo>& b) {return a.first < b.first; });
+
+				for (auto [edge_marknum, edge_info] : edges_info) {
 					ImGui::PushID(i++);
 					if (ImGui::TreeNode("", "Edge: %d", edge_marknum)) {
 
