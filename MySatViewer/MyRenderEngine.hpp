@@ -714,7 +714,7 @@ namespace MyRenderEngine {
 		MyRenderEngine& myRenderEngine;
 	};
 
-
+	// Temp: no use
 	class ObjRenderer : public IRenderable {
 	public:
 		ObjInfo& objInfo;
@@ -991,6 +991,47 @@ namespace MyRenderEngine {
 
 		}
 
+		void RenderGui() {
+			ImGui::Begin("OBJ Edges Info");
+
+			if (ImGui::TreeNode("Red Edges")) {
+				int id = 0;
+
+				for (int i = 0; i < red_lines.size(); i += 12) {
+
+					ImGui::PushID(id++);
+					if (ImGui::TreeNode("", "Red Edge: %d", i / 12)) {
+						if (ImGui::Button("Go")) {
+
+							glm::vec3 p1{
+								red_lines[i + 0],
+								red_lines[i + 1],
+								red_lines[i + 2]
+							};
+
+							glm::vec3 p2{
+								red_lines[i + 6],
+								red_lines[i + 7],
+								red_lines[i + 8]
+							};
+
+							glm::vec3 mid = (p1 + p2) / 2.0f;
+
+							myRenderEngine.SetCameraPos(mid);
+						}
+
+						ImGui::TreePop();
+					}
+					ImGui::PopID();
+
+				}
+
+				ImGui::TreePop();
+			}
+
+			ImGui::End();
+		}
+
 		void Render(
 			const RenderInfo& renderInfo
 		) override {
@@ -1014,10 +1055,14 @@ namespace MyRenderEngine {
 			glDrawArrays(GL_LINES, 0, green_lines.size() / 6);
 			glBindVertexArray(0);
 
+			RenderGui();
 		}
 
 
-		ObjLineRenderer(ObjInfo& objInfo, Shader&& shader) : objInfo(objInfo), shader(std::move(shader)) {}
+		ObjLineRenderer(ObjInfo& objInfo, Shader&& shader, MyRenderEngine& myRenderEngine) : objInfo(objInfo), shader(std::move(shader)), myRenderEngine(myRenderEngine) {}
 		~ObjLineRenderer() {}
+
+	private:
+		MyRenderEngine& myRenderEngine;
 	};
 } // namespace MyRenderEngine

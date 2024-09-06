@@ -77,7 +77,7 @@ int main(int argc, char const* argv[])
 
         myRenderEngine.camera.MovementSpeed = 1.0f;
 
-        auto objLineRendererPtr = std::make_shared<MyRenderEngine::ObjLineRenderer>(objInfo, std::move(objLineShader));
+        auto objLineRendererPtr = std::make_shared<MyRenderEngine::ObjLineRenderer>(objInfo, std::move(objLineShader), myRenderEngine);
         objLineRendererPtr->Setup();
         myRenderEngine.AddRenderable(objLineRendererPtr);
     }
