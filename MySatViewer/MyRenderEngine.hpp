@@ -681,7 +681,7 @@ namespace MyRenderEngine {
 
 			ImGui::Begin("SAT Edges Info");
 			if (ImGui::TreeNode("Edges")) {
-				int i = 0;
+				int id = 0;
 
 				// 按照edge编号排序
 				// TODO: 可以优化
@@ -693,7 +693,23 @@ namespace MyRenderEngine {
 				std::sort(edges_info.begin(), edges_info.end(), [](const std::pair<int, EdgeInfo>& a, const std::pair<int, EdgeInfo>& b) {return a.first < b.first; });
 
 				for (auto [edge_marknum, edge_info] : edges_info) {
-					ImGui::PushID(i++);
+
+					bool color_flag = false;
+					ImU32 treenode_color;
+					if (edge_info.nonmanifoldCount == 1) {
+						color_flag = true;
+						treenode_color = IM_COL32(255, 0, 0, 255); // Red 
+					}
+					else if (edge_info.nonmanifoldCount > 2) {
+						color_flag = true;
+						treenode_color = IM_COL32(0, 0, 255, 255); // Blue
+					}
+
+					if (color_flag) {
+						ImGui::PushStyleColor(ImGuiCol_Text, treenode_color);
+					}
+
+					ImGui::PushID(id++);
 					if (ImGui::TreeNode("", "Edge: %d", edge_marknum)) {
 
 						ImGui::Text("Index: %d", edge_info.edgeIndex);
@@ -706,6 +722,11 @@ namespace MyRenderEngine {
 
 						ImGui::TreePop();
 					}
+
+					if (color_flag) {
+						ImGui::PopStyleColor();
+					}
+
 					ImGui::PopID();
 				}
 
