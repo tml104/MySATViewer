@@ -65,6 +65,11 @@ namespace util
         return "string";
     }
 
+    template <>
+    inline constexpr std::string_view type_name<float>() {
+        return "float";
+    }
+
     template <typename T>
     std::string to_string(const T& value)
     {

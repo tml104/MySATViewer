@@ -28,10 +28,12 @@
 
 using json = nlohmann::json;
 
-const string VERSION = "0.1";
+const string VERSION = "2024年10月30日 15:15:58";
 
 unsigned int loadTexture(char const* path);
 unsigned int loadCubemap(vector<std::string> faces);
+
+// -m 3 -o ./models/bunny.obj ./models/C_ent(1)_stl_2.stl ./models/C_ent(1)_geometry_json_.json
 
 int main(int argc, char const* argv[])
 {
@@ -40,17 +42,30 @@ int main(int argc, char const* argv[])
     args_parser.set_program_name("MySatViewer")
         .add_help_option()
         .use_color_error()
-        .add_sc_option("-v", "--version", "show version info", []() {std::cout << "MySatViewer version" << VERSION << std::endl; })
-        .add_option<int>("-m", "--model", "Which body you want to show for lines.", -1)
-        .add_option<std::string>("-o", "--obj", "Load Obj", "")
-        .add_argument<std::string>("stl_model_path", "stl model path")
-        .add_argument<std::string>("geometry_json_path", "geometry json path")
+        .add_sc_option("-v", "--version", "show version info", []() {std::cout << "MySatViewer version: " << VERSION << std::endl; })
+        .add_option("-o", "--obj", "Read from OBJ")
+        .add_option("-s", "--stl", "Read from STL")
+        .add_option<int>("-b", "--body", "(Only For STL) Which body you want to show for lines.", -1)
+        .add_option<float>("-x", "--scale", "(Only For OBJ) Scale OBJ", 1.0)
+        .add_option<double>("-D", "--distance", "(Only For OBJ) Distance Threshold", 0.001)
+        .add_option<double>("-A", "--angle", "(Only For OBJ) Angle Threshold", 150.0)
+        .add_option<std::string>("-p", "--path", "OBJ or STL Path", "")
+        .add_option<std::string>("-g", "--geometry", "(Only For STL) Geometry File Path", "")
         .parse(argc, argv);
 
-    int selected_body = args_parser.get_option<int>("-m");
-    std::string obj_path = args_parser.get_option<std::string>("-o");
-    std::string stl_model_path = args_parser.get_argument<std::string>("stl_model_path");
-    std::string geometry_json_path = args_parser.get_argument<std::string>("geometry_json_path");
+    // 模式
+    bool obj_mode = args_parser.has_option("--obj");
+    bool stl_mode = args_parser.has_option("--stl");
+
+    int selected_body = args_parser.get_option<int>("-b");
+    float scale_factor = args_parser.get_option<float>("-x");
+    double distance_threshold = args_parser.get_option<double>("-D");
+    double angle_threshold = args_parser.get_option<double>("-A");
+    //std::string obj_path = args_parser.get_option<std::string>("-o");
+    //std::string stl_model_path = args_parser.get_argument<std::string>("stl_model_path");
+    //std::string geometry_json_path = args_parser.get_argument<std::string>("geometry_json_path");
+    std::string model_path = args_parser.get_option<std::string>("-p");
+    std::string geometry_path = args_parser.get_option<std::string>("-g");
 
     // parse args END
 
@@ -59,36 +74,37 @@ int main(int argc, char const* argv[])
     
     Shader stlShader("./shaders/MySat/flatShader.vs", "./shaders/MySat/flatShader.fs");
     Shader objShader("./shaders/MySat/objShader.vs", "./shaders/MySat/objShader.fs");
-    Shader objLineShader("./shaders/MySat/objLineShader.vs", "./shaders/MySat/objLineShader.fs");
+    Shader objLineShader("./shaders/MySat/objLineShader2.vs", "./shaders/MySat/objLineShader2.fs");
     Shader lineShader("./shaders/MySat/lineShader.vs", "./shaders/MySat/lineShader.fs");
 
     MyRenderEngine::SatInfo satInfo;
+    MyRenderEngine::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
 
-    MyRenderEngine::ObjInfo objInfo;
-
-    if (obj_path != "") {
-        std::cout << "Loading OBJ: " << obj_path << std::endl;
-        objInfo.LoadObj(obj_path); // 注意这个对象的生命周期，因为目前objRendererPtr是通过引用的方式拿信息的！
+    if (obj_mode) {
+        std::cout << "Loading OBJ: " << model_path << std::endl;
+        objInfo.LoadObj(model_path); 
         std::cout << "Loading OBJ Done." << std::endl;
 
+        // Temp: ObjRenderer
         //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,std::move(objShader));
         //objRendererPtr->Setup();
         //myRenderEngine.AddRenderable(objRendererPtr);
 
-        myRenderEngine.camera.MovementSpeed = 1.0f;
+        //myRenderEngine.camera.MovementSpeed = 1.0f;
+        MyRenderEngine::ObjLineWithGuiRendererInputs inputs{ scale_factor , distance_threshold, angle_threshold };
 
-        auto objLineRendererPtr = std::make_shared<MyRenderEngine::ObjLineRenderer>(objInfo, std::move(objLineShader), myRenderEngine);
-        objLineRendererPtr->Setup();
-        myRenderEngine.AddRenderable(objLineRendererPtr);
+        auto objLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjLineWithGuiRenderer>(objInfo, inputs, std::move(objLineShader), myRenderEngine);
+        objLineWithGuiRendererPtr->Setup();
+        myRenderEngine.AddRenderable(objLineWithGuiRendererPtr);
     }
-    else {
-        std::cout << "Loading STL: " << stl_model_path << std::endl;
-        satInfo.LoadStl(stl_model_path);
+    else if(stl_mode) {
+        std::cout << "Loading STL: " << model_path << std::endl;
+        satInfo.LoadStl(model_path);
         std::cout << "Loading STL Done." << std::endl;
 
-        std::cout << "Loading GeometryJson: " << geometry_json_path << std::endl;
-        satInfo.LoadGeometryJson(geometry_json_path, selected_body);
-        std::cout << "Loading GeometryJson Done." << std::endl;
+        std::cout << "Loading Geometry Json: " << geometry_path << std::endl;
+        satInfo.LoadGeometryJson(geometry_path, selected_body);
+        std::cout << "Loading Geometry Json Done." << std::endl;
 
         myRenderEngine.SetCameraPos(satInfo.newCameraPos);
 

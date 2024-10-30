@@ -31,6 +31,20 @@ using json = nlohmann::json;
 
 namespace MyRenderEngine {
 
+	namespace Utils {
+		glm::mat4 CalculateModelMatrix(const glm::vec3& position, const glm::vec3& rotation = glm::vec3(0.0f), const glm::vec3& scale = glm::vec3(1.0f)) { // 原来引用能设置默认变量吗……
+			glm::mat4 trans = glm::mat4(1.0f);
+
+			trans = glm::translate(trans, position);
+			trans = glm::rotate(trans, glm::radians(rotation.x), glm::vec3(1.0, 0.0, 0.0));
+			trans = glm::rotate(trans, glm::radians(rotation.y), glm::vec3(0.0, 1.0, 0.0));
+			trans = glm::rotate(trans, glm::radians(rotation.z), glm::vec3(0.0, 0.0, 1.0));
+			trans = glm::scale(trans, scale);
+
+			return trans;
+		}
+	}
+
 	struct EdgeInfo {
 		int edgeIndex;
 		int markNum;
@@ -227,7 +241,6 @@ namespace MyRenderEngine {
 	struct RenderInfo {
 		glm::mat4 projection_matrix;
 		glm::mat4 view_matrix;
-		glm::mat4 model_matrix;
 		glm::vec3 camera_pos;
 
 		bool showModel;
@@ -252,6 +265,8 @@ namespace MyRenderEngine {
 		int stlVerticesCount;
 		Shader shader;
 
+		glm::mat4 modelMatrix{ 1.0f };
+
 		void Render(
 			const RenderInfo& renderInfo
 		) override {
@@ -260,7 +275,7 @@ namespace MyRenderEngine {
 
 				shader.setMatrix4("projection", renderInfo.projection_matrix);
 				shader.setMatrix4("view", renderInfo.view_matrix);
-				shader.setMatrix4("model", renderInfo.model_matrix);
+				shader.setMatrix4("model", modelMatrix);
 				shader.setVec3("viewPos", renderInfo.camera_pos);
 
 				glBindVertexArray(VAO);
@@ -305,6 +320,8 @@ namespace MyRenderEngine {
 		std::vector<glm::vec3> edgeColors;
 		Shader shader;
 
+		glm::mat4 modelMatrix{ 1.0f };
+
 		void Render(
 			const RenderInfo& renderInfo
 		) override {
@@ -312,7 +329,7 @@ namespace MyRenderEngine {
 
 			shader.setMatrix4("projection", renderInfo.projection_matrix);
 			shader.setMatrix4("view", renderInfo.view_matrix);
-			shader.setMatrix4("model", renderInfo.model_matrix);
+			shader.setMatrix4("model", modelMatrix);
 			//shader.setVec3("viewPos", camera_pos);
 
 			for (int h = 0; h < VAOs.size(); h++) {
@@ -541,7 +558,6 @@ namespace MyRenderEngine {
 
 				renderInfo.projection_matrix = projectionMatrix;
 				renderInfo.view_matrix = viewMatrix;
-				renderInfo.model_matrix = modelMatrix;
 				renderInfo.camera_pos = camera.Position;
 
 				renderInfo.showModel = showModel;
@@ -755,6 +771,8 @@ namespace MyRenderEngine {
 		unsigned int EBO;
 		Shader shader;
 
+		glm::mat4 modelMatrix{ 1.0f };
+
 		void Setup() {
 			glGenVertexArrays(1, &VAO);
 			glGenBuffers(1, &VBO);
@@ -779,7 +797,7 @@ namespace MyRenderEngine {
 
 			shader.setMatrix4("projection", renderInfo.projection_matrix);
 			shader.setMatrix4("view", renderInfo.view_matrix);
-			shader.setMatrix4("model", renderInfo.model_matrix);
+			shader.setMatrix4("model", modelMatrix);
 
 			glBindVertexArray(VAO);
 			glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(objInfo.indices.size()), GL_UNSIGNED_INT, 0);
@@ -791,11 +809,19 @@ namespace MyRenderEngine {
 		~ObjRenderer() {}
 	};
 
-	class ObjLineRenderer : public IRenderable {
+
+	struct ObjLineWithGuiRendererInputs {
+		float scale_factor;
+		double distance_threshold;
+		double angle_threshold;
+	};
+
+	class ObjLineWithGuiRenderer : public IRenderable {
 	public:
 		ObjInfo& objInfo;
+		ObjLineWithGuiRendererInputs inputs;
 
-		std::vector<float> yelllow_lines;
+		std::vector<float> yellow_lines;
 		std::vector<float> green_lines;
 		std::vector<float> red_lines;
 
@@ -810,7 +836,40 @@ namespace MyRenderEngine {
 
 		Shader shader;
 
+		glm::mat4 modelMatrix{ 1.0f };
+
+		void ModifyModelMatrixWithScale() {
+			auto new_matrix = Utils::CalculateModelMatrix(glm::vec3{ 0.0f }, glm::vec3{ 0.0f }, glm::vec3{ inputs.scale_factor });
+			modelMatrix = new_matrix;
+		}
+
+		void OnApplyNewInputs() {
+			ModifyModelMatrixWithScale();
+		}
+
+		void OnGoClick(glm::vec3 p1, glm::vec3 p2) {
+			p1 = glm::vec4(p1, 1.0f) * modelMatrix;
+			p2 = glm::vec4(p2, 1.0f) * modelMatrix;
+
+			glm::vec3 mid = (p1 + p2) / 2.0f;
+			myRenderEngine.SetCameraPos(mid);
+		}
+
+		void DeleteBuffers() {
+			glDeleteVertexArrays(1, &yellowVAO);
+			glDeleteVertexArrays(1, &greenVAO);
+			glDeleteVertexArrays(1, &redVAO);
+			glDeleteBuffers(1, &yellowVBO);
+			glDeleteBuffers(1, &greenVBO);
+			glDeleteBuffers(1, &redVBO);
+		}
+
 		void Setup() {
+			ModifyModelMatrixWithScale();
+
+			yellow_lines.clear();
+			green_lines.clear();
+			red_lines.clear();
 
 			std::set<std::pair<int, int>> ps;
 			std::map<std::pair<int, int>, glm::vec3> color_map;
@@ -828,20 +887,13 @@ namespace MyRenderEngine {
 
 					if (color == glm::vec3{ 1.0f, 1.0f, 0.0f }) { // Y
 						yellow_count++;
-						yelllow_lines.emplace_back(point1.x);
-						yelllow_lines.emplace_back(point1.y);
-						yelllow_lines.emplace_back(point1.z);
-						yelllow_lines.emplace_back(color.x);
-						yelllow_lines.emplace_back(color.y);
-						yelllow_lines.emplace_back(color.z);
+						yellow_lines.emplace_back(point1.x);
+						yellow_lines.emplace_back(point1.y);
+						yellow_lines.emplace_back(point1.z);
 
-
-						yelllow_lines.emplace_back(point2.x);
-						yelllow_lines.emplace_back(point2.y);
-						yelllow_lines.emplace_back(point2.z);
-						yelllow_lines.emplace_back(color.x);
-						yelllow_lines.emplace_back(color.y);
-						yelllow_lines.emplace_back(color.z);
+						yellow_lines.emplace_back(point2.x);
+						yellow_lines.emplace_back(point2.y);
+						yellow_lines.emplace_back(point2.z);
 					}
 					else if (color == glm::vec3{ 1.0f, 0.0f, 0.0f }){ // R
 						red_count++;
@@ -849,32 +901,19 @@ namespace MyRenderEngine {
 						red_lines.emplace_back(point1.x);
 						red_lines.emplace_back(point1.y);
 						red_lines.emplace_back(point1.z);
-						red_lines.emplace_back(color.x);
-						red_lines.emplace_back(color.y);
-						red_lines.emplace_back(color.z);
-
 
 						red_lines.emplace_back(point2.x);
 						red_lines.emplace_back(point2.y);
 						red_lines.emplace_back(point2.z);
-						red_lines.emplace_back(color.x);
-						red_lines.emplace_back(color.y);
-						red_lines.emplace_back(color.z);
 					}
 					else {
 						green_lines.emplace_back(point1.x);
 						green_lines.emplace_back(point1.y);
 						green_lines.emplace_back(point1.z);
-						green_lines.emplace_back(color.x);
-						green_lines.emplace_back(color.y);
-						green_lines.emplace_back(color.z);
 
 						green_lines.emplace_back(point2.x);
 						green_lines.emplace_back(point2.y);
 						green_lines.emplace_back(point2.z);
-						green_lines.emplace_back(color.x);
-						green_lines.emplace_back(color.y);
-						green_lines.emplace_back(color.z);
 					}
 
 					ps.insert(p);
@@ -886,7 +925,7 @@ namespace MyRenderEngine {
 
 				// 距离
 				float dis = glm::distance(point1, point2);
-				if (dis < 0.001) {
+				if (dis < inputs.distance_threshold) {
 					color = glm::vec3{ 1.0f, 0.0f, 0.0f }; // R
 					std::cout << "dis: " << dis << std::endl;
 				}
@@ -898,7 +937,7 @@ namespace MyRenderEngine {
 
 				float angle = acos(dot_value / (glm::length(v1) * glm::length(v2))) * 180.0f / M_PI;
 
-				if (angle > 150.0) {
+				if (angle > inputs.angle_threshold) {
 					color = glm::vec3{ 1.0f, 1.0f, 0.0f }; // Y
 					std::cout << "angle: "<< angle << std::endl;
 				}
@@ -953,6 +992,7 @@ namespace MyRenderEngine {
 				
 			}
 
+			// 标记完成后，将颜色等信息添加到vector中
 			for (int i = 0; i < objInfo.indices.size(); i+=3) {
 				int j = i + 1;
 				int k = i + 2;
@@ -1009,29 +1049,41 @@ namespace MyRenderEngine {
 				//glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * objInfo.indices.size(), objInfo.indices.data(), GL_STATIC_DRAW);
 
 				glEnableVertexAttribArray(0);
-				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-				glEnableVertexAttribArray(1);
-				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+				//glEnableVertexAttribArray(1);
+				//glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
 
 				glBindVertexArray(0);
 			};
 
-			set_vao(yellowVAO, yellowVBO, yelllow_lines);
+			DeleteBuffers();
+
+			set_vao(yellowVAO, yellowVBO, yellow_lines);
 			set_vao(redVAO, redVBO, red_lines);
 			set_vao(greenVAO, greenVBO, green_lines);
-
 		}
 
 		void RenderGui() {
 			ImGui::Begin("OBJ Edges Info");
 
+			if (ImGui::TreeNode("Inputs Control")) {
+
+				ImGui::InputFloat("scale_factor", &inputs.scale_factor, 0.1f, 1.0f, "%.3f");
+				ImGui::InputDouble("distance_threshold", &inputs.distance_threshold, 0.0001f, 0.01f, "%.8f");
+				ImGui::InputDouble("angle_threshold", &inputs.angle_threshold, 0.1f, 10.0f, "%.8f");
+
+				if (ImGui::Button("Change Inputs")) {
+					OnApplyNewInputs();
+				}
+
+				ImGui::TreePop();
+			}
+
 			if (ImGui::TreeNode("Red Edges")) {
 				int id = 0;
-
-				for (int i = 0; i < red_lines.size(); i += 12) {
-
+				for (int i = 0; i < red_lines.size(); i += 6) {
 					ImGui::PushID(id++);
-					if (ImGui::TreeNode("", "Red Edge: %d", i / 12)) {
+					if (ImGui::TreeNode("", "Red Edge: %d", i / 6)) {
 						if (ImGui::Button("Go")) {
 
 							glm::vec3 p1{
@@ -1041,24 +1093,51 @@ namespace MyRenderEngine {
 							};
 
 							glm::vec3 p2{
-								red_lines[i + 6],
-								red_lines[i + 7],
-								red_lines[i + 8]
+								red_lines[i + 3],
+								red_lines[i + 4],
+								red_lines[i + 5]
 							};
 
-							glm::vec3 mid = (p1 + p2) / 2.0f;
-
-							myRenderEngine.SetCameraPos(mid);
+							OnGoClick(p1, p2);
 						}
 
 						ImGui::TreePop();
 					}
 					ImGui::PopID();
-
 				}
-
 				ImGui::TreePop();
 			}
+
+			if (ImGui::TreeNode("Yellow Edges")) {
+				int id = 0;
+				for (int i = 0; i < yellow_lines.size(); i += 6) {
+					ImGui::PushID(id++);
+					if (ImGui::TreeNode("", "Yellow Edge: %d", i / 6)) {
+						if (ImGui::Button("Go")) {
+
+							glm::vec3 p1{
+								yellow_lines[i + 0],
+								yellow_lines[i + 1],
+								yellow_lines[i + 2]
+							};
+
+							glm::vec3 p2{
+								yellow_lines[i + 3],
+								yellow_lines[i + 4],
+								yellow_lines[i + 5]
+							};
+
+							OnGoClick(p1, p2);
+						}
+
+						ImGui::TreePop();
+					}
+					ImGui::PopID();
+				}
+				ImGui::TreePop();
+			}
+
+			
 
 			ImGui::End();
 		}
@@ -1070,28 +1149,34 @@ namespace MyRenderEngine {
 
 			shader.setMatrix4("projection", renderInfo.projection_matrix);
 			shader.setMatrix4("view", renderInfo.view_matrix);
-			shader.setMatrix4("model", renderInfo.model_matrix);
+			shader.setMatrix4("model", modelMatrix);
 
 			/*glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(objInfo.indices.size()), GL_UNSIGNED_INT, 0);*/
 
+			shader.setVec3("subcolor", glm::vec3(1.0f, 1.0f, 0.0f));
 			glBindVertexArray(yellowVAO);
-			glDrawArrays(GL_LINES, 0, yelllow_lines.size()/6);
+			glDrawArrays(GL_LINES, 0, yellow_lines.size()/3);
 			glBindVertexArray(0);
 
+			shader.setVec3("subcolor", glm::vec3(1.0f, 0.0f, 0.0f));
 			glBindVertexArray(redVAO);
-			glDrawArrays(GL_LINES, 0, red_lines.size() / 6);
+			glDrawArrays(GL_LINES, 0, red_lines.size() / 3);
 			glBindVertexArray(0);
 
+			shader.setVec3("subcolor", glm::vec3(0.0f, 1.0f, 0.0f));
 			glBindVertexArray(greenVAO);
-			glDrawArrays(GL_LINES, 0, green_lines.size() / 6);
+			glDrawArrays(GL_LINES, 0, green_lines.size() / 3);
 			glBindVertexArray(0);
 
 			RenderGui();
 		}
 
 
-		ObjLineRenderer(ObjInfo& objInfo, Shader&& shader, MyRenderEngine& myRenderEngine) : objInfo(objInfo), shader(std::move(shader)), myRenderEngine(myRenderEngine) {}
-		~ObjLineRenderer() {}
+		ObjLineWithGuiRenderer(ObjInfo& objInfo, ObjLineWithGuiRendererInputs inputs, Shader&& shader, MyRenderEngine& myRenderEngine) : objInfo(objInfo), inputs(inputs), shader(std::move(shader)), myRenderEngine(myRenderEngine) {}
+
+		~ObjLineWithGuiRenderer() {
+			DeleteBuffers();
+		}
 
 	private:
 		MyRenderEngine& myRenderEngine;
