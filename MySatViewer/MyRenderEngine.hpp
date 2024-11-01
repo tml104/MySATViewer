@@ -687,7 +687,7 @@ namespace MyRenderEngine {
 		}
 	};
 
-	class MyGuiRenderer : public IRenderable {
+	class SatGuiRenderer : public IRenderable {
 	public:
 		SatInfo& satInfo;
 
@@ -753,9 +753,43 @@ namespace MyRenderEngine {
 			ImGui::End();
 		}
 
-		MyGuiRenderer(SatInfo& satInfo, MyRenderEngine& myRenderEngine) : satInfo(satInfo), myRenderEngine(myRenderEngine) {}
+		SatGuiRenderer(SatInfo& satInfo, MyRenderEngine& myRenderEngine) : satInfo(satInfo), myRenderEngine(myRenderEngine) {}
 
-		~MyGuiRenderer() {}
+		~SatGuiRenderer() {}
+
+	private:
+		MyRenderEngine& myRenderEngine;
+	};
+
+	class BasicGuiRenderer : public IRenderable {
+	public:
+
+		void Render(
+			const RenderInfo& renderInfo
+		) override {
+			ImGui::Begin("Basic Info");
+
+			// 相机位置
+			float& camX = myRenderEngine.camera.Position.x;
+			float& camY = myRenderEngine.camera.Position.y;
+			float& camZ = myRenderEngine.camera.Position.z;
+
+			ImGui::InputFloat("Camera X", &camX);
+			ImGui::InputFloat("Camera Y", &camY);
+			ImGui::InputFloat("Camera Z", &camZ);
+
+			// 移动速度
+			ImGui::InputFloat("Camera Speed", &myRenderEngine.camera.MovementSpeed);
+
+
+			ImGui::End();
+
+
+		}
+
+		BasicGuiRenderer(MyRenderEngine& myRenderEngine): myRenderEngine(myRenderEngine) {
+
+		}
 
 	private:
 		MyRenderEngine& myRenderEngine;

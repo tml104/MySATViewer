@@ -77,6 +77,9 @@ int main(int argc, char const* argv[])
     Shader objLineShader("./shaders/MySat/objLineShader2.vs", "./shaders/MySat/objLineShader2.fs");
     Shader lineShader("./shaders/MySat/lineShader.vs", "./shaders/MySat/lineShader.fs");
 
+    auto basicGuiRendererPtr = std::make_shared<MyRenderEngine::BasicGuiRenderer>(myRenderEngine);
+    myRenderEngine.AddRenderable(basicGuiRendererPtr);
+
     MyRenderEngine::SatInfo satInfo;
     MyRenderEngine::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
 
@@ -116,7 +119,7 @@ int main(int argc, char const* argv[])
         satLineRendererPtr->LoadFromSatInfo(satInfo);
         myRenderEngine.AddRenderable(satLineRendererPtr);
 
-        auto myGuiRendererPtr = std::make_shared<MyRenderEngine::MyGuiRenderer>(satInfo, myRenderEngine);
+        auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo, myRenderEngine);
         myRenderEngine.AddRenderable(myGuiRendererPtr);
     }
 
