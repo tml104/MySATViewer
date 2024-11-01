@@ -878,7 +878,7 @@ namespace MyRenderEngine {
 		}
 
 		void OnApplyNewInputs() {
-			ModifyModelMatrixWithScale();
+			Setup();
 		}
 
 		void OnGoClick(glm::vec3 p1, glm::vec3 p2) {
