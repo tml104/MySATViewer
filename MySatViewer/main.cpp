@@ -61,9 +61,6 @@ int main(int argc, char const* argv[])
     float scale_factor = args_parser.get_option<float>("-x");
     double distance_threshold = args_parser.get_option<double>("-D");
     double angle_threshold = args_parser.get_option<double>("-A");
-    //std::string obj_path = args_parser.get_option<std::string>("-o");
-    //std::string stl_model_path = args_parser.get_argument<std::string>("stl_model_path");
-    //std::string geometry_json_path = args_parser.get_argument<std::string>("geometry_json_path");
     std::string model_path = args_parser.get_option<std::string>("-p");
     std::string geometry_path = args_parser.get_option<std::string>("-g");
 
@@ -88,17 +85,18 @@ int main(int argc, char const* argv[])
         objInfo.LoadObj(model_path); 
         std::cout << "Loading OBJ Done." << std::endl;
 
+        MyRenderEngine::ObjMarkNum::GetInstance().LoadFromObjInfo(objInfo);
+
         // Temp: ObjRenderer
         //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,std::move(objShader));
         //objRendererPtr->Setup();
         //myRenderEngine.AddRenderable(objRendererPtr);
 
-        //myRenderEngine.camera.MovementSpeed = 1.0f;
-        MyRenderEngine::ObjLineWithGuiRendererInputs inputs{ scale_factor , distance_threshold, angle_threshold };
+        MyRenderEngine::ObjNonManifoldLineWithGuiRendererInputs inputs{ scale_factor};
 
-        auto objLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjLineWithGuiRenderer>(objInfo, inputs, std::move(objLineShader), myRenderEngine);
-        objLineWithGuiRendererPtr->Setup();
-        myRenderEngine.AddRenderable(objLineWithGuiRendererPtr);
+        auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), inputs, &(objLineShader), myRenderEngine);
+        objNonManifoldLineWithGuiRendererPtr->SetUp();
+        myRenderEngine.AddRenderable(objNonManifoldLineWithGuiRendererPtr);
     }
     else if(stl_mode) {
         std::cout << "Loading STL: " << model_path << std::endl;
