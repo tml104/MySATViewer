@@ -179,67 +179,77 @@ namespace MyRenderEngine {
 			int ii = 0;
 			auto root_edges = data["root_edges"];
 			for (auto&& element : root_edges) { // for each edge
-				int nonmanifold_count = element["nonmanifold_count"];
-				int body_id = element["body"];
-				int marknum = element["marknum"];
+				try {
+					int nonmanifold_count = element.at("nonmanifold_count");
+					int body_id = element.at("body");
+					int marknum = element.at("marknum");
+					int st_marknum = element.at("st_marknum");
+					int ed_marknum = element.at("ed_marknum");
 
-				if (selected_body != -1 && selected_body != body_id)
-				{
-					continue;
+					if (selected_body != -1 && selected_body != body_id)
+					{
+						continue;
+					}
+
+					if (nonmanifold_count != 2)
+					{
+						printf("[LoadGeometryJson] nonmanifold: edge: %d (in json: %d), body: %d, count: %d, st: %d, ed: %d \n", marknum, ii, body_id, nonmanifold_count, st_marknum, ed_marknum);
+						//spdlog::info("nonmanifold: edge: {}, body: {], count: {}", int(element["marknum"]), body_id, nonmanifold_count);
+					}
+
+					glm::vec3 color;
+					if (nonmanifold_count == 1) {
+						color = glm::vec3(1.0, 0.0, 0.0);
+					}
+					else if (nonmanifold_count == 2) {
+						color = glm::vec3(0.0, 1.0, 0.0);
+					}
+					else if (nonmanifold_count == 4) {
+						color = glm::vec3(0.0, 0.0, 1.0);
+					}
+					else if (nonmanifold_count == 3) {
+						color = glm::vec3(1.0, 1.0, 0.0);
+					}
+					else {
+						color = glm::vec3(0.0, 1.0, 1.0);
+					}
+
+					edgeColors.emplace_back(color);
+
+					auto sampled_points = element.at("sampled_points");
+					std::vector<float> vertices;
+					int point_count = 0;
+
+					for (auto&& point : sampled_points) {
+						float x = point.at("x");
+						float y = point.at("y");
+						float z = point.at("z");
+
+						//std::cout << x << " " << y << " " << z << " " << std::endl;
+						vertices.emplace_back(x);
+						vertices.emplace_back(y);
+						vertices.emplace_back(z);
+
+						point_count++;
+					}
+
+					edgeSampledPoints.emplace_back(vertices);
+					edgeSampledPointsCounts.emplace_back(point_count);
+
+					// mid pos
+					glm::vec3 mid_pos;
+					mid_pos.x = sampled_points[point_count / 2]["x"];
+					mid_pos.y = sampled_points[point_count / 2]["y"];
+					mid_pos.z = sampled_points[point_count / 2]["z"];
+
+					edgeMap[marknum] = { ii++, marknum, body_id, nonmanifold_count, mid_pos };
+
 				}
+				catch (json::out_of_range& e) {
 
-				if (nonmanifold_count != 2)
-				{
-					printf("[LoadGeometryJson] nonmanifold: edge: %d, body: %d, count: %d \n", int(element["marknum"]), body_id, nonmanifold_count);
-					//spdlog::info("nonmanifold: edge: {}, body: {], count: {}", int(element["marknum"]), body_id, nonmanifold_count);
+					printf("[LoadGeometryJson] Edge (in json: %d) load failed: maybe no geometry exist: %s", ii++, e.what());
 				}
-
-				glm::vec3 color;
-				if (nonmanifold_count == 1) {
-					color = glm::vec3(1.0, 0.0, 0.0);
-				}
-				else if (nonmanifold_count == 2) {
-					color = glm::vec3(0.0, 1.0, 0.0);
-				}
-				else if (nonmanifold_count == 4) {
-					color = glm::vec3(0.0, 0.0, 1.0);
-				}
-				else if (nonmanifold_count == 3) {
-					color = glm::vec3(1.0, 1.0, 0.0);
-				}
-				else {
-					color = glm::vec3(0.0, 1.0, 1.0);
-				}
-
-				edgeColors.emplace_back(color);
-
-				auto sampled_points = element["sampled_points"];
-				std::vector<float> vertices;
-				int point_count = 0;
-
-				for (auto&& point : sampled_points) {
-					float x = point["x"];
-					float y = point["y"];
-					float z = point["z"];
-
-					//std::cout << x << " " << y << " " << z << " " << std::endl;
-					vertices.emplace_back(x);
-					vertices.emplace_back(y);
-					vertices.emplace_back(z);
-
-					point_count++;
-				}
-
-				edgeSampledPoints.emplace_back(vertices);
-				edgeSampledPointsCounts.emplace_back(point_count);
-
-				// mid pos
-				glm::vec3 mid_pos;
-				mid_pos.x = sampled_points[point_count / 2]["x"];
-				mid_pos.y = sampled_points[point_count / 2]["y"];
-				mid_pos.z = sampled_points[point_count / 2]["z"];
-
-				edgeMap[marknum] = { ii++, marknum, body_id, nonmanifold_count, mid_pos };
+				
 			}
 		}
 	};
@@ -833,7 +843,7 @@ namespace MyRenderEngine {
 		unsigned int VAO;
 		unsigned int VBO;
 		int stlVerticesCount;
-		Shader shader;
+		Shader* shader;
 
 		glm::mat4 modelMatrix{ 1.0f };
 
@@ -841,12 +851,12 @@ namespace MyRenderEngine {
 			const RenderInfo& renderInfo
 		) override {
 			if (renderInfo.showModel) {
-				shader.use();
+				shader->use();
 
-				shader.setMatrix4("projection", renderInfo.projection_matrix);
-				shader.setMatrix4("view", renderInfo.view_matrix);
-				shader.setMatrix4("model", modelMatrix);
-				shader.setVec3("viewPos", renderInfo.camera_pos);
+				shader->setMatrix4("projection", renderInfo.projection_matrix);
+				shader->setMatrix4("view", renderInfo.view_matrix);
+				shader->setMatrix4("model", modelMatrix);
+				shader->setVec3("viewPos", renderInfo.camera_pos);
 
 				glBindVertexArray(VAO);
 				glDrawArrays(GL_TRIANGLES, 0, stlVerticesCount);
@@ -872,9 +882,8 @@ namespace MyRenderEngine {
 			glBindVertexArray(0);
 		}
 
-		// 通过移动转移shader所有权
-		SatStlRenderer(Shader&& shader):
-			shader(std::move(shader)),
+		SatStlRenderer(Shader* shader):
+			shader(shader),
 			VAO(0),
 			VBO(0)
 		{}
@@ -888,18 +897,18 @@ namespace MyRenderEngine {
 		std::vector<unsigned int> VBOs;
 		std::vector<int> edgeSampledPointsCounts;
 		std::vector<glm::vec3> edgeColors;
-		Shader shader;
+		Shader* shader;
 
 		glm::mat4 modelMatrix{ 1.0f };
 
 		void Render(
 			const RenderInfo& renderInfo
 		) override {
-			shader.use();
+			shader->use();
 
-			shader.setMatrix4("projection", renderInfo.projection_matrix);
-			shader.setMatrix4("view", renderInfo.view_matrix);
-			shader.setMatrix4("model", modelMatrix);
+			shader->setMatrix4("projection", renderInfo.projection_matrix);
+			shader->setMatrix4("view", renderInfo.view_matrix);
+			shader->setMatrix4("model", modelMatrix);
 			//shader.setVec3("viewPos", camera_pos);
 
 			for (int h = 0; h < VAOs.size(); h++) {
@@ -907,7 +916,7 @@ namespace MyRenderEngine {
 				int VAO_size = edgeSampledPointsCounts[h];
 				glm::vec3 color = edgeColors[h];
 
-				shader.setVec3("subcolor", color);
+				shader->setVec3("subcolor", color);
 				glBindVertexArray(VAO);
 				glDrawArrays(GL_LINE_STRIP, 0, VAO_size);
 			}
@@ -940,8 +949,8 @@ namespace MyRenderEngine {
 		}
 
 		// 通过移动转移shader所有权
-		SatLineRenderer(Shader&& shader) :
-			shader(std::move(shader))
+		SatLineRenderer(Shader* shader) :
+			shader(shader)
 		{}
 
 		~SatLineRenderer() {}

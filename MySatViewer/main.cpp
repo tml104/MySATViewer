@@ -35,6 +35,10 @@ unsigned int loadCubemap(vector<std::string> faces);
 
 // -m 3 -o ./models/bunny.obj ./models/C_ent(1)_stl_2.stl ./models/C_ent(1)_geometry_json_.json
 
+// -o -p ./models/bunny.obj
+
+// -s -p ./models/rot_cyl3_stl_0.stl -g ./models/rot_cyl3_geometry_json_.json
+
 int main(int argc, char const* argv[])
 {
     // parse args
@@ -109,11 +113,11 @@ int main(int argc, char const* argv[])
 
         myRenderEngine.SetCameraPos(satInfo.newCameraPos);
 
-        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(std::move(stlShader));
+        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(&(stlShader));
         satStlRendererPtr->LoadFromSatInfo(satInfo);
         myRenderEngine.AddRenderable(satStlRendererPtr);
 
-        auto satLineRendererPtr = std::make_shared<MyRenderEngine::SatLineRenderer>(std::move(lineShader));
+        auto satLineRendererPtr = std::make_shared<MyRenderEngine::SatLineRenderer>(&(lineShader));
         satLineRendererPtr->LoadFromSatInfo(satInfo);
         myRenderEngine.AddRenderable(satLineRendererPtr);
 
