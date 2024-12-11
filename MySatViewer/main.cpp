@@ -28,7 +28,7 @@
 
 using json = nlohmann::json;
 
-const string VERSION = "2024年10月30日 15:15:58";
+const string VERSION = "2024年12月11日 23:48:24";
 
 unsigned int loadTexture(char const* path);
 unsigned int loadCubemap(vector<std::string> faces);
@@ -38,6 +38,9 @@ unsigned int loadCubemap(vector<std::string> faces);
 // -o -p ./models/bunny.obj
 
 // -s -p ./models/rot_cyl3_stl_0.stl -g ./models/rot_cyl3_geometry_json_.json
+
+// TODO: 查一下那个B_ent3的obj
+// -o -p 
 
 int main(int argc, char const* argv[])
 {
@@ -91,16 +94,17 @@ int main(int argc, char const* argv[])
 
         MyRenderEngine::ObjMarkNum::GetInstance().LoadFromObjInfo(objInfo);
 
-        // Temp: ObjRenderer
-        //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,std::move(objShader));
-        //objRendererPtr->Setup();
-        //myRenderEngine.AddRenderable(objRendererPtr);
+        auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,&(objShader));
+        objRendererPtr->Setup();
+        myRenderEngine.AddRenderable(objRendererPtr);
 
-        MyRenderEngine::ObjNonManifoldLineWithGuiRendererInputs inputs{ scale_factor};
-
-        auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), inputs, &(objLineShader), myRenderEngine);
+        auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), &(objLineShader), myRenderEngine);
         objNonManifoldLineWithGuiRendererPtr->SetUp();
         myRenderEngine.AddRenderable(objNonManifoldLineWithGuiRendererPtr);
+
+
+        //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo, &stlShader);
+
     }
     else if(stl_mode) {
         std::cout << "Loading STL: " << model_path << std::endl;
