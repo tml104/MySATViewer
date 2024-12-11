@@ -28,7 +28,7 @@
 
 using json = nlohmann::json;
 
-const string VERSION = "2024年12月11日 23:48:24";
+const string VERSION = "2024年12月11日 23:58:05";
 
 unsigned int loadTexture(char const* path);
 unsigned int loadCubemap(vector<std::string> faces);
