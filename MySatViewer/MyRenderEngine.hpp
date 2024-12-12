@@ -614,7 +614,7 @@ namespace MyRenderEngine {
 				else {
 					return it->second;
 				}
-				};
+			};
 
 			auto make_halfedge = [&](int i, int j) -> std::shared_ptr<HalfEdge> {
 				auto edge_ptr = make_edge(i, j);
@@ -1480,6 +1480,15 @@ namespace MyRenderEngine {
 		std::vector<float> green_lines;
 		std::vector<float> red_lines;
 
+		struct YellowInfo{
+			int halfEdgesCount;
+			int edgeMarkNum;
+		};
+
+		std::vector<YellowInfo> yellowInfos;
+		std::vector<YellowInfo> greenInfos;
+		std::vector<YellowInfo> redInfos;
+
 		unsigned int yellowVAO;
 		unsigned int yellowVBO;
 
@@ -1516,9 +1525,14 @@ namespace MyRenderEngine {
 			green_lines.clear();
 			red_lines.clear();
 
+			yellowInfos.clear();
+			greenInfos.clear();
+			redInfos.clear();
+
 			// 添加顶点坐标到3个vector中，每个vector中按照3个开始点，3个结束点这样交替存放顶点
 			for (auto e_pair : objMarkNum.edgesMap) {
 				auto e = e_pair.second;
+				
 				auto st_coord = e->st->pointCoord;
 				auto ed_coord = e->ed->pointCoord;
 				if (e->halfEdges.size() == 2) { // green
@@ -1529,6 +1543,8 @@ namespace MyRenderEngine {
 					green_lines.emplace_back(ed_coord.x());
 					green_lines.emplace_back(ed_coord.y());
 					green_lines.emplace_back(ed_coord.z());
+
+					greenInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
 				}
 				else if (e->halfEdges.size() == 1) { // red
 					red_lines.emplace_back(st_coord.x());
@@ -1538,6 +1554,8 @@ namespace MyRenderEngine {
 					red_lines.emplace_back(ed_coord.x());
 					red_lines.emplace_back(ed_coord.y());
 					red_lines.emplace_back(ed_coord.z());
+
+					redInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
 				}
 				else { //yellow
 					yellow_lines.emplace_back(st_coord.x());
@@ -1547,6 +1565,8 @@ namespace MyRenderEngine {
 					yellow_lines.emplace_back(ed_coord.x());
 					yellow_lines.emplace_back(ed_coord.y());
 					yellow_lines.emplace_back(ed_coord.z());
+
+					yellowInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
 				}
 			}
 
@@ -1584,8 +1604,11 @@ namespace MyRenderEngine {
 			if (ImGui::TreeNode("Red Edges")) {
 				int id = 0;
 				for (int i = 0; i < red_lines.size(); i += 6) {
-					ImGui::PushID(id++);
+					ImGui::PushID(id);
 					if (ImGui::TreeNode("", "Red Edge: %d", i / 6)) {
+						ImGui::Text("half edges count: %d", redInfos[id].halfEdgesCount);
+						ImGui::Text("edge MarkNum: %d", redInfos[id].edgeMarkNum);
+
 						if (ImGui::Button("Go")) {
 
 							glm::vec3 p1{
@@ -1606,16 +1629,20 @@ namespace MyRenderEngine {
 						ImGui::TreePop();
 					}
 					ImGui::PopID();
+					id++;
 				}
-
 				ImGui::TreePop();
 			}
 
 			if (ImGui::TreeNode("Yellow Edges")) {
 				int id = 0;
 				for (int i = 0; i < yellow_lines.size(); i += 6) {
-					ImGui::PushID(id++);
+					ImGui::PushID(id);
 					if (ImGui::TreeNode("", "Yellow Edge: %d", i / 6)) {
+
+						ImGui::Text("half edges count: %d", yellowInfos[id].halfEdgesCount);
+						ImGui::Text("edge MarkNum: %d", yellowInfos[id].edgeMarkNum);
+
 						if (ImGui::Button("Go")) {
 
 							glm::vec3 p1{
@@ -1636,6 +1663,7 @@ namespace MyRenderEngine {
 						ImGui::TreePop();
 					}
 					ImGui::PopID();
+					id++;
 				}
 				ImGui::TreePop();
 			}
@@ -1643,8 +1671,12 @@ namespace MyRenderEngine {
 			if (ImGui::TreeNode("Green Edges")) {
 				int id = 0;
 				for (int i = 0; i < green_lines.size(); i += 6) {
-					ImGui::PushID(id++);
+					ImGui::PushID(id);
 					if (ImGui::TreeNode("", "Green Edge: %d", i / 6)) {
+
+						ImGui::Text("half edges count: %d", greenInfos[id].halfEdgesCount);
+						ImGui::Text("edge MarkNum: %d", greenInfos[id].edgeMarkNum);
+
 						if (ImGui::Button("Go")) {
 
 							glm::vec3 p1{
@@ -1665,6 +1697,7 @@ namespace MyRenderEngine {
 						ImGui::TreePop();
 					}
 					ImGui::PopID();
+					id++;
 				}
 				ImGui::TreePop();
 			}
