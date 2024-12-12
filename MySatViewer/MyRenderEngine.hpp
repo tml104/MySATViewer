@@ -1483,6 +1483,9 @@ namespace MyRenderEngine {
 		struct YellowInfo{
 			int halfEdgesCount;
 			int edgeMarkNum;
+
+			int stMarkNum;
+			int edMarkNum;
 		};
 
 		std::vector<YellowInfo> yellowInfos;
@@ -1544,7 +1547,7 @@ namespace MyRenderEngine {
 					green_lines.emplace_back(ed_coord.y());
 					green_lines.emplace_back(ed_coord.z());
 
-					greenInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
+					greenInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e), objMarkNum.GetId(e->st), objMarkNum.GetId(e->ed)});
 				}
 				else if (e->halfEdges.size() == 1) { // red
 					red_lines.emplace_back(st_coord.x());
@@ -1555,7 +1558,7 @@ namespace MyRenderEngine {
 					red_lines.emplace_back(ed_coord.y());
 					red_lines.emplace_back(ed_coord.z());
 
-					redInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
+					redInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e), objMarkNum.GetId(e->st), objMarkNum.GetId(e->ed) });
 				}
 				else { //yellow
 					yellow_lines.emplace_back(st_coord.x());
@@ -1566,7 +1569,7 @@ namespace MyRenderEngine {
 					yellow_lines.emplace_back(ed_coord.y());
 					yellow_lines.emplace_back(ed_coord.z());
 
-					yellowInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e) });
+					yellowInfos.push_back({ static_cast<int>(e->halfEdges.size()), objMarkNum.GetId(e), objMarkNum.GetId(e->st), objMarkNum.GetId(e->ed) });
 				}
 			}
 
@@ -1608,6 +1611,8 @@ namespace MyRenderEngine {
 					if (ImGui::TreeNode("", "Red Edge: %d", i / 6)) {
 						ImGui::Text("half edges count: %d", redInfos[id].halfEdgesCount);
 						ImGui::Text("edge MarkNum: %d", redInfos[id].edgeMarkNum);
+						ImGui::Text("st MarkNum: %d", redInfos[id].stMarkNum);
+						ImGui::Text("ed MarkNum: %d", redInfos[id].edMarkNum);
 
 						if (ImGui::Button("Go")) {
 
@@ -1642,6 +1647,8 @@ namespace MyRenderEngine {
 
 						ImGui::Text("half edges count: %d", yellowInfos[id].halfEdgesCount);
 						ImGui::Text("edge MarkNum: %d", yellowInfos[id].edgeMarkNum);
+						ImGui::Text("st MarkNum: %d", yellowInfos[id].stMarkNum);
+						ImGui::Text("ed MarkNum: %d", yellowInfos[id].edMarkNum);
 
 						if (ImGui::Button("Go")) {
 
@@ -1676,6 +1683,8 @@ namespace MyRenderEngine {
 
 						ImGui::Text("half edges count: %d", greenInfos[id].halfEdgesCount);
 						ImGui::Text("edge MarkNum: %d", greenInfos[id].edgeMarkNum);
+						ImGui::Text("st MarkNum: %d", greenInfos[id].stMarkNum);
+						ImGui::Text("ed MarkNum: %d", greenInfos[id].edMarkNum);
 
 						if (ImGui::Button("Go")) {
 
