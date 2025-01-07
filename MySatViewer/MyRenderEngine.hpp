@@ -31,6 +31,103 @@ using json = nlohmann::json;
 
 namespace MyRenderEngine {
 
+	// Configs
+	const glm::vec4 GREEN_BACKGROUND{ 0.2f, 0.3f, 0.3f, 1.0f };
+	const glm::vec4 BLACK_BACKGROUND{ 0.0f, 0.0f, 0.0f, 0.0f };
+
+	const glm::vec3 CAMERA_INIT_POS{ 0.0f, 0.0f, 5.0f };
+
+	const unsigned int SCR_WIDTH = 1024;
+	const unsigned int SCR_HEIGHT = 768;
+	const unsigned int SCR_X_POS = 200;
+	const unsigned int SCR_Y_POS = 200;
+
+	const glm::vec4 ZERO_VEC(0.0f);
+	const glm::vec4 ONE_VEC(1.0f);
+
+	// utility function for loading a 2D texture from file
+	// 绑定纹理对象与实际数据，并返回纹理对象ID以供随后激活纹理单元并将纹理对象与纹理单元绑定
+	// ---------------------------------------------------
+	unsigned int loadTexture(char const* path) {
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+
+		int width, height, nrComponents;
+		unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+
+		if (data) {
+			GLenum format;
+			if (nrComponents == 1) {
+				format = GL_RED;
+			}
+			else if (nrComponents == 3) {
+				format = GL_RGB;
+			}
+			else if (nrComponents == 4) {
+				format = GL_RGBA;
+			}
+
+			// 绑定：绑定纹理对象与实际数据
+			glBindTexture(GL_TEXTURE_2D, textureID);
+			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+
+			// 纹理环绕方式（与绑定之间的顺序随意）
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			stbi_image_free(data);
+
+		}
+		else {
+			std::cout << "Texture failed to load at path:" << path << std::endl;
+			stbi_image_free(data);
+		}
+
+		return textureID;
+	}
+
+	// loads a cubemap texture from 6 individual texture faces
+	// order:
+	// +X (right)
+	// -X (left)
+	// +Y (top)
+	// -Y (bottom)
+	// +Z (front) 
+	// -Z (back)
+	// -------------------------------------------------------
+	unsigned int loadCubemap(vector<std::string> faces)
+	{
+		unsigned int textureID;
+		glGenTextures(1, &textureID);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+		int width, height, nrChannels;
+		for (unsigned int i = 0; i < faces.size(); i++)
+		{
+			unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+			if (data)
+			{
+				glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+				stbi_image_free(data);
+			}
+			else
+			{
+				std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+				stbi_image_free(data);
+			}
+		}
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+		return textureID;
+	}
+
 	namespace Utils {
 		glm::mat4 CalculateModelMatrix(const glm::vec3& position, const glm::vec3& rotation = glm::vec3(0.0f), const glm::vec3& scale = glm::vec3(1.0f)) { // 原来引用能设置默认变量吗……
 			glm::mat4 trans = glm::mat4(1.0f);
@@ -89,11 +186,15 @@ namespace MyRenderEngine {
 		float scale_factor;
 
 		bool showModel;
+		bool transparentModel; // 可透明物体需要通过这个变量判断调用哪个着色器，当然渲染到的Target还是需要提前手动指定的
 
 		RenderInfo() :
-			showModel(false)
+			showModel(false),
+			transparentModel(false)
 		{}
 	};
+
+	// 这里就不用RenderableInfo这个设计了，因为之前里面只是用来传递isOpaque的，而这个量只在调用myRenderEngine.AddRenderable的时候有用。现在需要改成能够动态调整的，所以就不用了
 
 	class IRenderable {
 	public:
@@ -843,7 +944,9 @@ namespace MyRenderEngine {
 		unsigned int VAO;
 		unsigned int VBO;
 		int stlVerticesCount;
+
 		Shader* shader;
+		Shader* transparentShader;
 
 		glm::mat4 modelMatrix{ 1.0f };
 
@@ -851,12 +954,21 @@ namespace MyRenderEngine {
 			const RenderInfo& renderInfo
 		) override {
 			if (renderInfo.showModel) {
-				shader->use();
+				Shader* s;
 
-				shader->setMatrix4("projection", renderInfo.projection_matrix);
-				shader->setMatrix4("view", renderInfo.view_matrix);
-				shader->setMatrix4("model", modelMatrix);
-				shader->setVec3("viewPos", renderInfo.camera_pos);
+				if (renderInfo.transparentModel == false) {
+					s = shader;
+				}
+				else {
+					s = transparentShader;
+				}
+
+				s->use();
+
+				s->setMatrix4("projection", renderInfo.projection_matrix);
+				s->setMatrix4("view", renderInfo.view_matrix);
+				s->setMatrix4("model", modelMatrix);
+				s->setVec3("viewPos", renderInfo.camera_pos);
 
 				glBindVertexArray(VAO);
 				glDrawArrays(GL_TRIANGLES, 0, stlVerticesCount);
@@ -882,8 +994,9 @@ namespace MyRenderEngine {
 			glBindVertexArray(0);
 		}
 
-		SatStlRenderer(Shader* shader):
+		SatStlRenderer(Shader* shader, Shader* transparentShader):
 			shader(shader),
+			transparentShader(transparentShader),
 			VAO(0),
 			VBO(0)
 		{}
@@ -1066,16 +1179,39 @@ namespace MyRenderEngine {
 		// settings
 		unsigned int screenWidth;
 		unsigned int screenHeight;
+		unsigned int screenXPos;
+		unsigned int screenYPos;
+
 		glm::vec4 backgroundColor;
 		bool showModel;
 		float scaleFactor;
+		bool transparentModel;
 
 		GLFWwindow* window;
 		Camera camera;
 		MouseController mouseController;
 		KeyboardController keyboardController;
 
-		std::vector<std::shared_ptr<IRenderable>> IRenderables;
+		// 渲染对象列表
+		// opaqueRenderables：固定渲染在不透明framebuffer上的， opaqueOrTransparentRenderables： 可能渲染在不透明或透明framebuffer上的（通过transparentModel切换）
+		std::vector<std::shared_ptr<IRenderable>> opaqueRenderables, opaqueOrTransparentRenderables, guiRenderables;
+
+		std::shared_ptr<IRenderable> screenQuad; // [后设置]
+
+		// Framebuffer
+		// 生命周期已经闭环
+		unsigned int opaqueFBO;
+		unsigned int transparentFBO;
+
+		unsigned int opaqueTexture;
+		unsigned int depthTexture;
+
+		unsigned int accumTexture;
+		unsigned int revealTexture;
+
+		// OIT Use Shaders
+		Shader* compositeShader;
+		Shader* screenShader;
 
 		// glfw: whenever the window size changed (by OS or user resize) this callback function executes
 		void FramebufferSizeCallback(GLFWwindow* window, int width, int height) {
@@ -1083,13 +1219,33 @@ namespace MyRenderEngine {
 			// height will be significantly larger than specified on retina displays.
 			glViewport(0, 0, width, height);
 		}
+		
+		void AddOpaqueRenderable(const std::shared_ptr<IRenderable>& r) {
+			opaqueRenderables.emplace_back(r);
+		}
 
-		void AddRenderable(const std::shared_ptr<IRenderable>& r) {
-			IRenderables.emplace_back(r);
+		void AddOpaqueOrTransparentRenderable(const std::shared_ptr<IRenderable>& r) {
+			opaqueOrTransparentRenderables.emplace_back(r);
+		}
+
+		void AddScreenQuadRenderable(const std::shared_ptr<IRenderable>& r) {
+			screenQuad = r;
+		}
+
+		void AddGuiRenderable(const std::shared_ptr<IRenderable>& r) {
+			guiRenderables.emplace_back(r);
 		}
 
 		void SetCameraPos(const glm::vec3& pos) {
 			camera.Position = pos;
+		}
+
+		void SetCompositeShader(Shader* shader) {
+			compositeShader = shader;
+		}
+
+		void SetScreenShader(Shader* shader) {
+			screenShader = shader;
 		}
 
 		void StartRenderLoop() {
@@ -1113,6 +1269,11 @@ namespace MyRenderEngine {
 
 				ImGui::ShowDemoWindow();
 
+				for (auto& r : guiRenderables) {
+					r->Render(renderInfo);
+				}
+
+
 				// per-frame time logic
 				float currentFrame = static_cast<float>(glfwGetTime());
 				deltaTime = currentFrame - lastFrame;
@@ -1128,24 +1289,84 @@ namespace MyRenderEngine {
 				glfwGetFramebufferSize(window, &display_w, &display_h);
 				glViewport(0, 0, display_w, display_h);
 
-				glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
-				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 				glm::mat4 projectionMatrix = glm::perspective(glm::radians(camera.Zoom), static_cast<float>(screenWidth) / static_cast<float>(screenHeight), camera.Near, camera.Far);
 				glm::mat4 viewMatrix = camera.GetViewMatrix();
-				glm::mat4 modelMatrix{ 1.0f };
 
 				renderInfo.projection_matrix = projectionMatrix;
 				renderInfo.view_matrix = viewMatrix;
 				renderInfo.camera_pos = camera.Position;
 
 				renderInfo.showModel = showModel;
+				renderInfo.transparentModel = transparentModel;
 				renderInfo.scale_factor = scaleFactor;
 
-				// render IRenderable
-				for (auto&& r : IRenderables) {
+				// render IRenderable to opaqueFBO & transparentFBO
+				// -> Opaque (solid pass)
+				glEnable(GL_DEPTH_TEST);
+				glDepthFunc(GL_LESS);
+				glDepthMask(GL_TRUE);
+				glDisable(GL_BLEND);
+				glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, opaqueFBO);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+				for (auto& r : opaqueRenderables) {
 					r->Render(renderInfo);
 				}
+
+				if (transparentModel == false) {
+					for (auto& r : opaqueOrTransparentRenderables) {
+						r->Render(renderInfo);
+					}
+				}
+
+				// -> Transparent (transparent pass)
+				glDepthMask(GL_FALSE);
+				glEnable(GL_BLEND);
+				glBlendFunci(0, GL_ONE, GL_ONE);
+				glBlendFunci(1, GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
+				glBlendEquation(GL_FUNC_ADD);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, transparentFBO);
+				glClearBufferfv(GL_COLOR, 0, &ZERO_VEC[0]); // 新函数
+				glClearBufferfv(GL_COLOR, 1, &ONE_VEC[0]);
+
+				if (transparentModel == true) {
+					for (auto& r : opaqueOrTransparentRenderables) {
+						r->Render(renderInfo);
+					}
+				}
+
+				// render composite image (composite pass)
+				glDepthFunc(GL_ALWAYS);
+				glEnable(GL_BLEND);
+				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, opaqueFBO);
+
+				compositeShader->use();
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, accumTexture);
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, revealTexture);
+
+				screenQuad->Render(renderInfo);
+
+				// render screenQuad (draw to backbuffer) (final pass)
+				glDisable(GL_DEPTH_TEST);
+				glDepthMask(GL_TRUE); // enable depth writes so glClear won't ignore clearing the depth buffer
+				glDisable(GL_BLEND);
+
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+				screenShader->use();
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, opaqueTexture);
+
+				screenQuad->Render(renderInfo);
 
 				// Imgui rendering
 				ImGui::Render();
@@ -1178,23 +1399,95 @@ namespace MyRenderEngine {
 			ImGui_ImplOpenGL3_Init("#version 130");
 		}
 
+		// 这个没用上
 		void SetupGlobalOpenglState() {
 			glEnable(GL_DEPTH_TEST);
 			//glEnable(GL_BLEND);
 			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+			glDepthFunc(GL_LESS); // 深度缓冲比较通过条件：小于 （默认就是这个吧）
+			glDepthMask(GL_TRUE); // 允许更新深度缓冲
+			glDisable(GL_BLEND);
+			glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, backgroundColor.a);
+		}
+
+		void SetupFrameBuffers() {
+			glGenFramebuffers(1, &opaqueFBO);
+			glGenFramebuffers(1, &transparentFBO);
+
+			// opaqueTexture
+			glGenTextures(1, &opaqueTexture);
+			glBindTexture(GL_TEXTURE_2D, opaqueTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_HALF_FLOAT, NULL); // 注意这里用的是 gl_half_float
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			// depthTexture
+			glGenTextures(1, &depthTexture);
+			glBindTexture(GL_TEXTURE_2D, depthTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT,
+				0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			// Bind opaqueTexture & depthTexture to opaqueFBO
+			glBindFramebuffer(GL_FRAMEBUFFER, opaqueFBO);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, opaqueTexture, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				std::cout << "ERROR::FRAMEBUFFER:: Opaque framebuffer is not complete!" << std::endl;
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+			// set up attachments for transparent framebuffer
+			// accumTexture
+			glGenTextures(1, &accumTexture);
+			glBindTexture(GL_TEXTURE_2D, accumTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_HALF_FLOAT, NULL);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			// revealTexture
+			glGenTextures(1, &revealTexture);
+			glBindTexture(GL_TEXTURE_2D, revealTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, SCR_WIDTH, SCR_HEIGHT, 0, GL_RED, GL_FLOAT, NULL); // 注意这里因为只有一个通道所以会有所不同！
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glBindTexture(GL_TEXTURE_2D, 0);
+
+			// Bind accumTexture & revealTexture & depthTexture to transparent
+			glBindFramebuffer(GL_FRAMEBUFFER, transparentFBO);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, accumTexture, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, revealTexture, 0);
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, depthTexture, 0); // opaque framebuffer's depth texture
+
+			// don't forget to explicitly tell OpenGL that your transparent framebuffer has two draw buffers
+			const GLenum transparentDrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+			glDrawBuffers(2, transparentDrawBuffers);
+
+			if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+				std::cout << "ERROR::FRAMEBUFFER:: Transparent framebuffer is not complete!" << std::endl;
+
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 
 		MyRenderEngine(): 
-			camera(glm::vec3{1.0f}),
+			camera(CAMERA_INIT_POS),
 			mouseController(camera),
 			keyboardController(camera, showModel),
 			deltaTime(0.0f),
 			lastFrame(0.0f),
 
-			screenWidth(1024),
-			screenHeight(768),
-			backgroundColor(0.2f, 0.3f, 0.3f, 1.0f),
-			scaleFactor(1.0f)
+			screenWidth(SCR_WIDTH),
+			screenHeight(SCR_HEIGHT),
+			screenXPos(SCR_X_POS),
+			screenYPos(SCR_Y_POS),
+			backgroundColor(BLACK_BACKGROUND),
+			scaleFactor(1.0f),
+			transparentModel(false),
+			showModel(false)
 		{
 			int init_res = InitWindow(window);
 			if (init_res != 0) {
@@ -1204,7 +1497,20 @@ namespace MyRenderEngine {
 			glfwSwapInterval(1); // Enable vsync
 
 			SetupImGui();
-			SetupGlobalOpenglState();
+			//SetupGlobalOpenglState();
+			SetupFrameBuffers();
+
+		}
+
+		~MyRenderEngine() {
+			glDeleteTextures(1, &opaqueTexture);
+			glDeleteTextures(1, &depthTexture);
+			glDeleteTextures(1, &accumTexture);
+			glDeleteTextures(1, &revealTexture);
+			glDeleteFramebuffers(1, &opaqueFBO);
+			glDeleteFramebuffers(1, &transparentFBO);
+
+			std::cout << "MyrenderEngine Destructor executed." << std::endl;
 		}
 
 	private:
@@ -1213,10 +1519,11 @@ namespace MyRenderEngine {
 
 		int InitWindow(GLFWwindow* &window) {
 			glfwInit();
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+			glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
 			glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-			glfwWindowHint(GLFW_SAMPLES, 4);
+			//glfwWindowHint(GLFW_SAMPLES, 4); // 注意因为这里用了别的framebuffer所以这里没有意义
+			glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 
 #ifdef __APPLE__
 			glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
@@ -1363,7 +1670,13 @@ namespace MyRenderEngine {
 			ImGui::InputFloat("Camera Speed", &myRenderEngine.camera.MovementSpeed);
 
 			// 模型放大倍率
-			ImGui::InputFloat("scale_factor", &myRenderEngine.scaleFactor, 0.1f, 1.0f, "%.3f");
+			ImGui::InputFloat("Scale Factor", &myRenderEngine.scaleFactor, 0.1f, 1.0f, "%.3f");
+
+			// 显示模型
+			ImGui::Checkbox("Show Model", &myRenderEngine.showModel);
+
+			// 模型透明
+			ImGui::Checkbox("Transparent Model", &myRenderEngine.transparentModel);
 
 			ImGui::End();
 		}
@@ -1387,6 +1700,7 @@ namespace MyRenderEngine {
 		int verticesCount;
 
 		Shader* shader;
+		Shader* transparentShader;
 
 		glm::mat4 modelMatrix{ 1.0f };
 
@@ -1455,21 +1769,31 @@ namespace MyRenderEngine {
 			const RenderInfo& renderInfo
 		) override {
 			if (renderInfo.showModel) {
-				shader->use();
+				Shader* s;
 
-				shader->setMatrix4("projection", renderInfo.projection_matrix);
-				shader->setMatrix4("view", renderInfo.view_matrix);
-				shader->setMatrix4("model", glm::scale(modelMatrix, glm::vec3( renderInfo.scale_factor)));
-				shader->setVec3("viewPos", renderInfo.camera_pos);
+				if (renderInfo.transparentModel == false) {
+					s = shader;
+				}
+				else {
+					s = transparentShader;
+				}
+
+				s->use();
+
+				s->setMatrix4("projection", renderInfo.projection_matrix);
+				s->setMatrix4("view", renderInfo.view_matrix);
+				s->setMatrix4("model", glm::scale(modelMatrix, glm::vec3( renderInfo.scale_factor)));
+				s->setVec3("viewPos", renderInfo.camera_pos);
 
 				glBindVertexArray(VAO);
 				//glDrawElements(GL_TRIANGLES, static_cast<unsigned int>(objInfo.indices.size()), GL_UNSIGNED_INT, 0);
 				glDrawArrays(GL_TRIANGLES, 0, verticesCount);
 				glBindVertexArray(0);
+
 			}
 		}
 
-		ObjRenderer(ObjInfo& objInfo, Shader* shader): objInfo(objInfo), shader(shader), VAO(0), VBO(0), verticesCount(0) {}
+		ObjRenderer(ObjInfo& objInfo, Shader* shader, Shader* transparentShader): objInfo(objInfo), shader(shader), transparentShader(transparentShader), VAO(0), VBO(0), verticesCount(0) {}
 		~ObjRenderer() {}
 	};
 
@@ -1753,4 +2077,52 @@ namespace MyRenderEngine {
 		MyRenderEngine& myRenderEngine;
 		ObjMarkNum& objMarkNum;
 	};
+
+	class ScreenQuad : public IRenderable {
+	public:
+		unsigned int quadVAO;
+		unsigned int quadVBO;
+
+		int verticesCount;
+
+		//glm::mat4 modelMatrix; // 这版实现没有GetModelMatrix函数，所以先不用指定这个
+
+		void Render(
+			const RenderInfo& renderInfo
+		) override {
+			// without shader here
+
+			glBindVertexArray(quadVAO);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, verticesCount);
+			glBindVertexArray(0);
+		}
+
+		ScreenQuad() {
+			static float quadVertices[] = {
+				// positions        // texture Coords
+				-1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+				-1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+				 1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
+				 1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+			};
+
+			verticesCount = 4;
+
+			glGenVertexArrays(1, &quadVAO);
+			glGenBuffers(1, &quadVBO);
+
+			glBindVertexArray(quadVAO);
+				glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+				glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+
+				glEnableVertexAttribArray(0);
+				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+				glEnableVertexAttribArray(1);
+				glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+			glBindVertexArray(0);
+		}
+
+		~ScreenQuad() {}
+	};
+
 } // namespace MyRenderEngine

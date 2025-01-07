@@ -28,10 +28,8 @@
 
 using json = nlohmann::json;
 
-const string VERSION = "2024年12月11日 23:58:05";
-
-unsigned int loadTexture(char const* path);
-unsigned int loadCubemap(vector<std::string> faces);
+#define COMPILE_DATETIME (__DATE__ " " __TIME__)
+const string VERSION = COMPILE_DATETIME;
 
 // -m 3 -o ./models/bunny.obj ./models/C_ent(1)_stl_2.stl ./models/C_ent(1)_geometry_json_.json
 
@@ -76,13 +74,26 @@ int main(int argc, char const* argv[])
     // 注意：myRenderEngine 必须先构造
     MyRenderEngine::MyRenderEngine myRenderEngine;
     
-    Shader stlShader("./shaders/MySat/flatShader.vs", "./shaders/MySat/flatShader.fs");
-    Shader objShader("./shaders/MySat/objShader.vs", "./shaders/MySat/objShader.fs");
-    Shader objLineShader("./shaders/MySat/objLineShader2.vs", "./shaders/MySat/objLineShader2.fs");
-    Shader lineShader("./shaders/MySat/lineShader.vs", "./shaders/MySat/lineShader.fs");
+    Shader stlShader("./shaders/MySat/OIT/stlShader.vs", "./shaders/MySat/OIT/stlShader.fs");
+    Shader objShader("./shaders/MySat/OIT/objShader.vs", "./shaders/MySat/OIT/objShader.fs");
+
+    Shader stlTransparentShader("./shaders/MySat/OIT/stlShader.vs", "./shaders/MySat/OIT/stlTransparentShader.fs");
+    Shader objTransparentShader("./shaders/MySat/OIT/objShader.vs", "./shaders/MySat/OIT/objTransparentShader.fs");
+
+    Shader objLineShader("./shaders/MySat/OIT/objLineShader.vs", "./shaders/MySat/OIT/objLineShader.fs");
+    Shader lineShader("./shaders/MySat/OIT/lineShader.vs", "./shaders/MySat/OIT/lineShader.fs");
+
+    Shader compositeShader("./shaders/MySat/OIT/composite.vs", "./shaders/MySat/OIT/composite.fs");
+    Shader screenShader("./shaders/MySat/OIT/screen.vs", "./shaders/MySat/OIT/screen.fs");
 
     auto basicGuiRendererPtr = std::make_shared<MyRenderEngine::BasicGuiRenderer>(myRenderEngine);
-    myRenderEngine.AddRenderable(basicGuiRendererPtr);
+    myRenderEngine.AddGuiRenderable(basicGuiRendererPtr);
+
+    auto screenQuadRendererPtr = std::make_shared<MyRenderEngine::ScreenQuad>();
+    myRenderEngine.AddScreenQuadRenderable(screenQuadRendererPtr);
+
+    myRenderEngine.SetCompositeShader(&compositeShader);
+    myRenderEngine.SetScreenShader(&screenShader);
 
     MyRenderEngine::SatInfo satInfo;
     MyRenderEngine::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
@@ -94,14 +105,13 @@ int main(int argc, char const* argv[])
 
         MyRenderEngine::ObjMarkNum::GetInstance().LoadFromObjInfo(objInfo);
 
-        auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,&(objShader));
+        auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,&(objShader), &(objTransparentShader));
         objRendererPtr->Setup();
-        myRenderEngine.AddRenderable(objRendererPtr);
+        myRenderEngine.AddOpaqueOrTransparentRenderable(objRendererPtr);
 
         auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), &(objLineShader), myRenderEngine);
         objNonManifoldLineWithGuiRendererPtr->SetUp();
-        myRenderEngine.AddRenderable(objNonManifoldLineWithGuiRendererPtr);
-
+        myRenderEngine.AddOpaqueRenderable(objNonManifoldLineWithGuiRendererPtr);
 
         //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo, &stlShader);
 
@@ -117,102 +127,19 @@ int main(int argc, char const* argv[])
 
         myRenderEngine.SetCameraPos(satInfo.newCameraPos);
 
-        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(&(stlShader));
+        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(&(stlShader), &(stlTransparentShader));
         satStlRendererPtr->LoadFromSatInfo(satInfo);
-        myRenderEngine.AddRenderable(satStlRendererPtr);
+        myRenderEngine.AddOpaqueOrTransparentRenderable(satStlRendererPtr);
 
         auto satLineRendererPtr = std::make_shared<MyRenderEngine::SatLineRenderer>(&(lineShader));
         satLineRendererPtr->LoadFromSatInfo(satInfo);
-        myRenderEngine.AddRenderable(satLineRendererPtr);
+        myRenderEngine.AddOpaqueRenderable(satLineRendererPtr);
 
         auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo, myRenderEngine);
-        myRenderEngine.AddRenderable(myGuiRendererPtr);
+        myRenderEngine.AddGuiRenderable(myGuiRendererPtr);
     }
 
     myRenderEngine.StartRenderLoop();
 
     return 0;
-}
-
-// utility function for loading a 2D texture from file
-// 绑定纹理对象与实际数据，并返回纹理对象ID以供随后激活纹理单元并将纹理对象与纹理单元绑定
-// ---------------------------------------------------
-unsigned int loadTexture(char const* path) {
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-
-    int width, height, nrComponents;
-    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
-
-    if (data) {
-        GLenum format;
-        if (nrComponents == 1) {
-            format = GL_RED;
-        }
-        else if (nrComponents == 3) {
-            format = GL_RGB;
-        }
-        else if (nrComponents == 4) {
-            format = GL_RGBA;
-        }
-
-        // 绑定：绑定纹理对象与实际数据
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-
-        // 纹理环绕方式（与绑定之间的顺序随意）
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        stbi_image_free(data);
-
-    }
-    else {
-        std::cout << "Texture failed to load at path:" << path << std::endl;
-        stbi_image_free(data);
-    }
-
-    return textureID;
-}
-
-// loads a cubemap texture from 6 individual texture faces
-// order:
-// +X (right)
-// -X (left)
-// +Y (top)
-// -Y (bottom)
-// +Z (front) 
-// -Z (back)
-// -------------------------------------------------------
-unsigned int loadCubemap(vector<std::string> faces)
-{
-    unsigned int textureID;
-    glGenTextures(1, &textureID);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
-
-    int width, height, nrChannels;
-    for (unsigned int i = 0; i < faces.size(); i++)
-    {
-        unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
-        if (data)
-        {
-            glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            stbi_image_free(data);
-        }
-        else
-        {
-            std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
-            stbi_image_free(data);
-        }
-    }
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-    return textureID;
 }
