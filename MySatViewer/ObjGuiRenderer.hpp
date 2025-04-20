@@ -36,6 +36,9 @@ namespace MyRenderEngine {
 		std::vector<YellowInfo> greenInfos;
 		std::vector<YellowInfo> redInfos;
 
+		// TODO: need to improve design here
+		glm::mat4 modelMatrix{ 1.0f };
+
 
 		void SetUp() {
 			yellowInfos.clear();
@@ -66,7 +69,7 @@ namespace MyRenderEngine {
 			}
 		}
 
-		void RenderGui() {
+		void RenderGui(const RenderInfo& renderInfo) {
 
 			auto tree_node_render = [&](const std::string& name, const std::vector<YellowInfo>& infos) {
 					
@@ -90,8 +93,12 @@ namespace MyRenderEngine {
 								Topology::Vertex* ed_vertex_ptr = static_cast<Topology::Vertex*>(objMarkNum.GetEntityPtr({ TopoType::Vertex, infos[id].edMarkNum }));
 
 								Coordinate pos = (st_vertex_ptr->pointCoord + ed_vertex_ptr->pointCoord) / 2.0f;
+								glm::vec3 pos_in_glm{ pos.x(), pos.y(), pos.z() };
 
-								EventSystem::SetCameraPosEvent e{ {pos.x(), pos.y(), pos.z()}};
+								// ¿¼ÂÇmodel¾ØÕóºÍrenderInfo.scaleFactorµÄ±ä»»
+								pos_in_glm = glm::vec3(glm::vec4(pos_in_glm, 1.0f) * modelMatrix * renderInfo.scaleFactor);
+
+								EventSystem::SetCameraPosEvent e{pos_in_glm };
 								auto& dispatcher = EventSystem::Dispatcher::GetInstance();
 								dispatcher.Dispatch(e);
 							}
@@ -121,7 +128,7 @@ namespace MyRenderEngine {
 			const RenderInfo& renderInfo
 		) override {
 
-			RenderGui();
+			RenderGui(renderInfo);
 
 		}
 
