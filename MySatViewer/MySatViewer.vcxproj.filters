@@ -19,6 +19,24 @@
     <Filter Include="headers\Other">
       <UniqueIdentifier>{71e12edd-33d8-4a12-bafe-d48cd7cdf4d5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Topology">
+      <UniqueIdentifier>{cf4d04ec-02ba-428d-bf3b-1d32c9067f51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Topology\Info">
+      <UniqueIdentifier>{03beef34-1053-4590-8147-d22ba7fafe5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{1f808884-11a5-4e4e-b997-7715f7130805}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MyEngine\Renderable">
+      <UniqueIdentifier>{8e36f159-b296-4fb1-8005-72d878f4fe89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MyEngine\EventSystem">
+      <UniqueIdentifier>{a368132c-2bc8-470a-9da1-fed7c4d21226}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MyEngine\EventSystem\Events">
+      <UniqueIdentifier>{568d98dc-d67b-430a-98d6-1872707adb95}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -111,6 +129,69 @@
     </ClInclude>
     <ClInclude Include="json.hpp">
       <Filter>headers\Other</Filter>
+    </ClInclude>
+    <ClInclude Include="Topology.hpp">
+      <Filter>Topology</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjMarkNum.hpp">
+      <Filter>Topology</Filter>
+    </ClInclude>
+    <ClInclude Include="TopologyInfo.hpp">
+      <Filter>Topology\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjInfo.hpp">
+      <Filter>Topology\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.hpp">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="IRenderable.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="Configs.hpp">
+      <Filter>MyEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadTexture.hpp">
+      <Filter>MyEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderInfo.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="SatStlRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="SatInfo.hpp">
+      <Filter>Topology\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="SatLineRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="SatGuiRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="Dispatcher.hpp">
+      <Filter>MyEngine\EventSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="SetCameraPosEvent.hpp">
+      <Filter>MyEngine\EventSystem\Events</Filter>
+    </ClInclude>
+    <ClInclude Include="Event.hpp">
+      <Filter>MyEngine\EventSystem</Filter>
+    </ClInclude>
+    <ClInclude Include="BasicGuiRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjLineRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjGuiRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="ScreenQuad.hpp">
+      <Filter>MyEngine\Renderable</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

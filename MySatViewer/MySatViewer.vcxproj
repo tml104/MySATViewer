@@ -156,15 +156,36 @@
     <ClInclude Include="..\imgui\imstb_truetype.h" />
     <ClInclude Include="..\imgui\misc\cpp\imgui_stdlib.h" />
     <ClInclude Include="argparser.hpp" />
+    <ClInclude Include="BasicGuiRenderer.hpp" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="Configs.hpp" />
+    <ClInclude Include="Dispatcher.hpp" />
+    <ClInclude Include="Event.hpp" />
+    <ClInclude Include="IRenderable.hpp" />
     <ClInclude Include="json.hpp" />
+    <ClInclude Include="LoadTexture.hpp" />
     <ClInclude Include="mesh.h" />
     <ClInclude Include="model.h" />
     <ClInclude Include="MyRenderEngine.hpp" />
+    <ClInclude Include="ObjGuiRenderer.hpp" />
+    <ClInclude Include="ObjInfo.hpp" />
+    <ClInclude Include="ObjLineRenderer.hpp" />
+    <ClInclude Include="ObjMarkNum.hpp" />
+    <ClInclude Include="ObjRenderer.hpp" />
+    <ClInclude Include="RenderInfo.hpp" />
+    <ClInclude Include="SatGuiRenderer.hpp" />
+    <ClInclude Include="SatInfo.hpp" />
+    <ClInclude Include="SatLineRenderer.hpp" />
+    <ClInclude Include="SatStlRenderer.hpp" />
+    <ClInclude Include="ScreenQuad.hpp" />
+    <ClInclude Include="SetCameraPosEvent.hpp" />
     <ClInclude Include="shader_s.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="stl_reader.h" />
     <ClInclude Include="tiny_obj_loader.h" />
+    <ClInclude Include="Topology.hpp" />
+    <ClInclude Include="TopologyInfo.hpp" />
+    <ClInclude Include="Utils.hpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\imgui\misc\debuggers\imgui.natstepfilter" />

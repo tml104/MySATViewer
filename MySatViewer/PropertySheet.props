@@ -3,17 +3,18 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>D:\code\glfw\include;D:\code\glm-0.9.9.8\glm;D:\code\assimp-5.3.1\assimp-5.3.1\include;D:\code\assimp-5.3.1\assimp-5.3.1\build\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\code\glfw\lib;D:\code\assimp-5.3.1\assimp-5.3.1\build\bin\Debug;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(GLFW_PATH)\include;$(GLM_PATH);$(ASSIMP_PATH)\include;$(ASSIMP_PATH)\build\include;$(GLAD_PATH)\include;$(SPDLOG_PATH)\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(GLFW_PATH)\build\src\Debug;$(ASSIMP_PATH)\build\bin\Debug;$(ASSIMP_PATH)\build\lib\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>D:\code\glfw\include;D:\code\glm-0.9.9.8\glm;D:\code\assimp-5.3.1\assimp-5.3.1\include;D:\code\assimp-5.3.1\assimp-5.3.1\build\include;$(SolutionDir)imgui;$(SolutionDir)imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(GLFW_PATH)\include;$(GLM_PATH);$(ASSIMP_PATH)\include;$(ASSIMP_PATH)\build\include;$(GLAD_PATH)\include;$(SPDLOG_PATH)\include;$(SolutionDir)imgui;$(SolutionDir)imgui\backends;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <PreprocessorDefinitions>_USE_MATH_DEFINES;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_USE_MATH_DEFINES;SPDLOG_ACTIVE_LEVEL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>/utf-8 /DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_TRACE %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>D:\code\glfw\lib;D:\code\assimp-5.3.1\assimp-5.3.1\build\bin\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(GLFW_PATH)\build\src\Debug;$(ASSIMP_PATH)\build\bin\Debug;$(ASSIMP_PATH)\build\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;assimp-vc143-mtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>

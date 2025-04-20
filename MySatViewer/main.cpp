@@ -26,6 +26,25 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
+
+#include "BasicGuiRenderer.hpp"
+#include "ScreenQuad.hpp"
+
+#include "SatInfo.hpp"
+#include "ObjInfo.hpp"
+
+#include "ObjMarkNum.hpp"
+
+#include "ObjRenderer.hpp"
+#include "ObjLineRenderer.hpp"
+#include "ObjGuiRenderer.hpp"
+
+#include "SatStlRenderer.hpp"
+#include "SatLineRenderer.hpp"
+#include "SatGuiRenderer.hpp"
+
 using json = nlohmann::json;
 
 #define COMPILE_DATETIME (__DATE__ " " __TIME__)
@@ -40,8 +59,25 @@ const string VERSION = COMPILE_DATETIME;
 // TODO: 查一下那个B_ent3的obj
 // -o -p 
 
+void SetSpdlogPattern(std::string file_name = "default")
+{
+    //spdlog::set_pattern("[%H:%M:%S %z] [%n] [%^%L%$] [thread %t] [%s] [%@] %v");
+
+    // set formatter
+	std::string log_name = "logs/log_" + file_name + ".log";
+
+    auto file_logger = spdlog::basic_logger_mt("default_logger", log_name, true);
+    spdlog::set_default_logger(file_logger);
+
+    spdlog::set_pattern("[%H:%M:%S %z] [%^%L%$] [thread %t] [%s] [%@] [%!] %v");
+    spdlog::set_level(spdlog::level::trace);
+}
+
 int main(int argc, char const* argv[])
 {
+	SetSpdlogPattern();
+    SPDLOG_INFO("test");
+
     // parse args
     auto args_parser = util::argparser("SAT Viewer by TML104");
     args_parser.set_program_name("MySatViewer")
@@ -95,26 +131,31 @@ int main(int argc, char const* argv[])
     myRenderEngine.SetCompositeShader(&compositeShader);
     myRenderEngine.SetScreenShader(&screenShader);
 
-    MyRenderEngine::SatInfo satInfo;
-    MyRenderEngine::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
+    Info::SatInfo satInfo;
+    Info::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
 
     if (obj_mode) {
         std::cout << "Loading OBJ: " << model_path << std::endl;
-        objInfo.LoadObj(model_path); 
+        objInfo.LoadFromObj(model_path); 
         std::cout << "Loading OBJ Done." << std::endl;
 
-        MyRenderEngine::ObjMarkNum::GetInstance().LoadFromObjInfo(objInfo);
+        ObjMarkNum::GetInstance().LoadFromObjInfo(objInfo); // 注意这个必须先load
 
         auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo ,&(objShader), &(objTransparentShader));
         objRendererPtr->Setup();
         myRenderEngine.AddOpaqueOrTransparentRenderable(objRendererPtr);
 
-        auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), &(objLineShader), myRenderEngine);
-        objNonManifoldLineWithGuiRendererPtr->SetUp();
-        myRenderEngine.AddOpaqueRenderable(objNonManifoldLineWithGuiRendererPtr);
+        //auto objNonManifoldLineWithGuiRendererPtr = std::make_shared<MyRenderEngine::ObjNonManifoldLineWithGuiRenderer>(MyRenderEngine::ObjMarkNum::GetInstance(), &(objLineShader), myRenderEngine);
+        //objNonManifoldLineWithGuiRendererPtr->SetUp();
+        //myRenderEngine.AddOpaqueRenderable(objNonManifoldLineWithGuiRendererPtr);
 
-        //auto objRendererPtr = std::make_shared<MyRenderEngine::ObjRenderer>(objInfo, &stlShader);
+		auto objLineRendererPtr = std::make_shared<MyRenderEngine::ObjLineRenderer>(&(objLineShader));
+        objLineRendererPtr->SetUp();
+		myRenderEngine.AddOpaqueRenderable(objLineRendererPtr);
 
+		auto objGuiRendererPtr = std::make_shared<MyRenderEngine::ObjGuiRenderer>();
+        objGuiRendererPtr->SetUp();
+		myRenderEngine.AddGuiRenderable(objGuiRendererPtr);
     }
     else if(stl_mode) {
         std::cout << "Loading STL: " << model_path << std::endl;
@@ -135,7 +176,7 @@ int main(int argc, char const* argv[])
         satLineRendererPtr->LoadFromSatInfo(satInfo);
         myRenderEngine.AddOpaqueRenderable(satLineRendererPtr);
 
-        auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo, myRenderEngine);
+        auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo);
         myRenderEngine.AddGuiRenderable(myGuiRendererPtr);
     }
 
