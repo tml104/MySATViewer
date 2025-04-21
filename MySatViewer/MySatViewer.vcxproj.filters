@@ -193,6 +193,15 @@
     <ClInclude Include="ScreenQuad.hpp">
       <Filter>MyEngine\Renderable</Filter>
     </ClInclude>
+    <ClInclude Include="DebugShowInfo.hpp">
+      <Filter>Topology\Info</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugShowRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="DebugShowGuiRenderer.hpp">
+      <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\imgui\misc\debuggers\imgui.natstepfilter">

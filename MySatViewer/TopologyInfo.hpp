@@ -176,4 +176,14 @@ namespace Info {
 		std::unique_ptr<FaceGeometry> faceGeometry;
 	};
 
+
+
+	// DebugShowPointInfo
+
+	struct DebugShowPointInfo {
+		std::string name;
+		glm::vec3 pos;
+		glm::vec3 color;
+	};
+
 }

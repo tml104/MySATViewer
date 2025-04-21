@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -159,6 +159,9 @@
     <ClInclude Include="BasicGuiRenderer.hpp" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="Configs.hpp" />
+    <ClInclude Include="DebugShowGuiRenderer.hpp" />
+    <ClInclude Include="DebugShowInfo.hpp" />
+    <ClInclude Include="DebugShowRenderer.hpp" />
     <ClInclude Include="Dispatcher.hpp" />
     <ClInclude Include="Event.hpp" />
     <ClInclude Include="IRenderable.hpp" />

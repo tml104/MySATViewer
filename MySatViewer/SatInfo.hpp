@@ -158,7 +158,7 @@ namespace Info {
 
 			auto root_vertices = data["root_vertices"];
 
-			brepInfo.vertexInfos.reserve(stats.marknum_vertex);
+			brepInfo.vertexInfos.resize(stats.marknum_vertex);
 
 			int ii = 0;
 			for (auto&& element : root_vertices) {
@@ -178,7 +178,7 @@ namespace Info {
 					ii++;
 				}
 				catch (json::out_of_range& e) {
-					SPDLOG_INFO("Vertex {} load failed", ii++);
+					SPDLOG_INFO("Vertex {} load failed", ii++);	
 				}
 
 			}
@@ -187,7 +187,7 @@ namespace Info {
 
 		void _LoadEdgeInfos(const json& data) {
 			auto root_edges = data["root_edges"];
-			brepInfo.edgeInfos.reserve(stats.marknum_edge);
+			brepInfo.edgeInfos.resize(stats.marknum_edge);
 			int ii = 0;
 			for (auto&& element : root_edges) {
 				try {
@@ -288,6 +288,12 @@ namespace Info {
 
 						brepInfo.edgeInfos[ii].geometryPtr->sampledPoints.emplace_back(x, y, z);
 					}
+
+					glm::vec3 first_sampled_point = brepInfo.edgeInfos[ii].geometryPtr->sampledPoints.front();
+					glm::vec3 last_sampled_point = brepInfo.edgeInfos[ii].geometryPtr->sampledPoints.back();
+					glm::vec3 mid_point = (first_sampled_point + last_sampled_point) / 2.0f;
+
+					brepInfo.edgeInfos[ii].pos = mid_point;
 
 					ii++;
 				}

@@ -56,7 +56,7 @@ namespace MyRenderEngine {
 					if (ImGui::TreeNode("", "Edge: %d", edge_info.markNum)) {
 						ImGui::Text("Nonmanifold Count: %d", edge_info.nonmanifoldCount);
 						ImGui::Text("Body ID: %d", edge_info.bodyId);
-						ImGui::Text("Edge Mid Pos: (%d, %d, %d)", edge_info.pos.x, edge_info.pos.y, edge_info.pos.z);
+						ImGui::Text("Edge Mid Pos: (%f, %f, %f)", edge_info.pos.x, edge_info.pos.y, edge_info.pos.z);
 
 						if (ImGui::Button("Go")) {
 							// 设置相机位置的事件

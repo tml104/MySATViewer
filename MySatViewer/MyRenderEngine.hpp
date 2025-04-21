@@ -224,6 +224,7 @@ namespace MyRenderEngine {
 		void StartRenderLoop() {
 
 			RenderInfo renderInfo;
+			glEnable(GL_PROGRAM_POINT_SIZE);
 
 			while (!glfwWindowShouldClose(window)) {
 				// poll IO events (keys pressed/released, mouse moved etc.)

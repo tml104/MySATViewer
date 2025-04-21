@@ -34,6 +34,7 @@
 
 #include "SatInfo.hpp"
 #include "ObjInfo.hpp"
+#include "DebugShowInfo.hpp"
 
 #include "ObjMarkNum.hpp"
 
@@ -44,6 +45,9 @@
 #include "SatStlRenderer.hpp"
 #include "SatLineRenderer.hpp"
 #include "SatGuiRenderer.hpp"
+
+#include "DebugShowRenderer.hpp"
+#include "DebugShowGuiRenderer.hpp"
 
 using json = nlohmann::json;
 
@@ -56,8 +60,9 @@ const string VERSION = COMPILE_DATETIME;
 
 // -s -p ./models/rot_cyl3_stl_0.stl -g ./models/rot_cyl3_geometry_json_.json
 
-// TODO: 查一下那个B_ent3的obj
-// -o -p 
+// -o -p ./models/bunny.obj -d ./models/A_ent1(1)_cf_debugshow.json
+
+// -s -p ./models/A_ent1(1)_cf_stl_0.stl -g ./models/A_ent1(1)_cf_geometry_json_0.json -d ./models/A_ent1(1)_cf_debugshow.json
 
 void SetSpdlogPattern(std::string file_name = "default")
 {
@@ -92,6 +97,7 @@ int main(int argc, char const* argv[])
         .add_option<double>("-A", "--angle", "(Only For OBJ) Angle Threshold", 150.0)
         .add_option<std::string>("-p", "--path", "OBJ or STL Path", "")
         .add_option<std::string>("-g", "--geometry", "(Only For STL) Geometry File Path", "")
+		.add_option<std::string>("-d", "--debugshow", "DebugShow File Path", "")
         .parse(argc, argv);
 
     // 模式
@@ -104,6 +110,7 @@ int main(int argc, char const* argv[])
     double angle_threshold = args_parser.get_option<double>("-A");
     std::string model_path = args_parser.get_option<std::string>("-p");
     std::string geometry_path = args_parser.get_option<std::string>("-g");
+	std::string debugshow_path = args_parser.get_option<std::string>("-d");
 
     // parse args END
 
@@ -122,6 +129,8 @@ int main(int argc, char const* argv[])
     Shader compositeShader("./shaders/MySat/OIT/composite.vs", "./shaders/MySat/OIT/composite.fs");
     Shader screenShader("./shaders/MySat/OIT/screen.vs", "./shaders/MySat/OIT/screen.fs");
 
+	Shader debugShowPointShader("./shaders/MySat/OIT/debugShowPointShader.vs", "./shaders/MySat/OIT/debugShowPointShader.fs");
+
     auto basicGuiRendererPtr = std::make_shared<MyRenderEngine::BasicGuiRenderer>(myRenderEngine);
     myRenderEngine.AddGuiRenderable(basicGuiRendererPtr);
 
@@ -133,6 +142,7 @@ int main(int argc, char const* argv[])
 
     Info::SatInfo satInfo;
     Info::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
+    Info::DebugShowInfo debugShowInfo;
 
     if (obj_mode) {
         std::cout << "Loading OBJ: " << model_path << std::endl;
@@ -178,6 +188,20 @@ int main(int argc, char const* argv[])
 
         auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo);
         myRenderEngine.AddGuiRenderable(myGuiRendererPtr);
+    }
+
+
+    if (debugshow_path != "") {
+        debugShowInfo.LoadFromDebugShowJson(debugshow_path);
+
+		auto debugShowRendererPtr = std::make_shared<MyRenderEngine::DebugShowRenderer>(&debugShowPointShader);
+		debugShowRendererPtr->LoadFromDebugShowInfo(debugShowInfo);
+
+		myRenderEngine.AddOpaqueRenderable(debugShowRendererPtr);
+
+
+		auto debugShowGuiRendererPtr = std::make_shared<MyRenderEngine::DebugShowGuiRenderer>(debugShowInfo);
+		myRenderEngine.AddGuiRenderable(debugShowGuiRendererPtr);
     }
 
     myRenderEngine.StartRenderLoop();
