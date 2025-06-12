@@ -158,6 +158,7 @@
     <ClInclude Include="argparser.hpp" />
     <ClInclude Include="BasicGuiRenderer.hpp" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="CellInfo.hpp" />
     <ClInclude Include="Configs.hpp" />
     <ClInclude Include="DebugShowGuiRenderer.hpp" />
     <ClInclude Include="DebugShowInfo.hpp" />

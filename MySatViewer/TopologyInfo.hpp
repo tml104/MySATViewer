@@ -173,7 +173,7 @@ namespace Info {
 
 		// Geometry info need to show in here
 
-		std::unique_ptr<FaceGeometry> faceGeometry;
+		std::unique_ptr<FaceGeo	metry> faceGeometry;
 	};
 
 
@@ -186,4 +186,20 @@ namespace Info {
 		glm::vec3 color;
 	};
 
+
+	// CellBoxInfo & MeshBoxInfo
+	struct OneBoxInfo {
+		int id;
+		glm::vec3 min_point;
+		glm::vec3 max_point;
+	};
+
+
+	// Rays
+	struct OneRayInfo {
+		int id;
+		glm::vec3 start_point;
+		glm::vec3 direction; // 单位方向向量
+		float r; // 长度
+	};
 }

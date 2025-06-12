@@ -37,6 +37,9 @@
     <Filter Include="MyEngine\EventSystem\Events">
       <UniqueIdentifier>{568d98dc-d67b-430a-98d6-1872707adb95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Topology\Info\CellMode">
+      <UniqueIdentifier>{214216d4-004f-4e0f-82e4-3eb6d9e8d409}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -201,6 +204,9 @@
     </ClInclude>
     <ClInclude Include="DebugShowGuiRenderer.hpp">
       <Filter>MyEngine\Renderable</Filter>
+    </ClInclude>
+    <ClInclude Include="CellInfo.hpp">
+      <Filter>Topology\Info\CellMode</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

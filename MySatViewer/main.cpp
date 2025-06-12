@@ -81,7 +81,7 @@ void SetSpdlogPattern(std::string file_name = "default")
 int main(int argc, char const* argv[])
 {
 	SetSpdlogPattern();
-    SPDLOG_INFO("test");
+    SPDLOG_INFO("MySatViewer First Logger");
 
     // parse args
     auto args_parser = util::argparser("SAT Viewer by TML104");
@@ -89,20 +89,18 @@ int main(int argc, char const* argv[])
         .add_help_option()
         .use_color_error()
         .add_sc_option("-v", "--version", "show version info", []() {std::cout << "MySatViewer version: " << VERSION << std::endl; })
-        .add_option("-o", "--obj", "Read from OBJ")
-        .add_option("-s", "--stl", "Read from STL")
+        .add_option<std::string>("-m", "--mode", "SatViewer Mode. sat for stl & geometry from sat; obj for obj; cell for cell & meshbox & rays", "")
         .add_option<int>("-b", "--body", "(Only For STL) Which body you want to show for lines.", -1)
         .add_option<float>("-x", "--scale", "(Only For OBJ) Scale OBJ", 1.0)
-        .add_option<double>("-D", "--distance", "(Only For OBJ) Distance Threshold", 0.001)
-        .add_option<double>("-A", "--angle", "(Only For OBJ) Angle Threshold", 150.0)
+        .add_option<double>("-D", "--distance", "(Only For OBJ) Distance Threshold for red short edges", 0.001)
+        .add_option<double>("-A", "--angle", "(Only For OBJ) Angle Threshold for angle", 150.0)
         .add_option<std::string>("-p", "--path", "OBJ or STL Path", "")
         .add_option<std::string>("-g", "--geometry", "(Only For STL) Geometry File Path", "")
 		.add_option<std::string>("-d", "--debugshow", "DebugShow File Path", "")
         .parse(argc, argv);
 
     // 模式
-    bool obj_mode = args_parser.has_option("--obj");
-    bool stl_mode = args_parser.has_option("--stl");
+	std::string mode = args_parser.get_option<std::string>("-m");
 
     int selected_body = args_parser.get_option<int>("-b");
     float scale_factor = args_parser.get_option<float>("-x");
@@ -144,7 +142,7 @@ int main(int argc, char const* argv[])
     Info::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
     Info::DebugShowInfo debugShowInfo;
 
-    if (obj_mode) {
+    if (mode == "obj") {
         std::cout << "Loading OBJ: " << model_path << std::endl;
         objInfo.LoadFromObj(model_path); 
         std::cout << "Loading OBJ Done." << std::endl;
@@ -167,7 +165,7 @@ int main(int argc, char const* argv[])
         objGuiRendererPtr->SetUp();
 		myRenderEngine.AddGuiRenderable(objGuiRendererPtr);
     }
-    else if(stl_mode) {
+    else if(mode == "sat") {
         std::cout << "Loading STL: " << model_path << std::endl;
         satInfo.LoadStl(model_path);
         std::cout << "Loading STL Done." << std::endl;
@@ -188,7 +186,15 @@ int main(int argc, char const* argv[])
 
         auto myGuiRendererPtr = std::make_shared<MyRenderEngine::SatGuiRenderer>(satInfo);
         myRenderEngine.AddGuiRenderable(myGuiRendererPtr);
-    }
+	}
+	else if (mode == "cell") {
+		SPDLOG_ERROR("Cell mode is not implemented yet.");
+		return -1;
+	}
+	else {
+		SPDLOG_ERROR("Unknown mode: {}", mode);
+		return -1;
+	}
 
 
     if (debugshow_path != "") {
