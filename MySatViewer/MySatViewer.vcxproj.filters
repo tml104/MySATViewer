@@ -40,6 +40,9 @@
     <Filter Include="Topology\Info\CellMode">
       <UniqueIdentifier>{214216d4-004f-4e0f-82e4-3eb6d9e8d409}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MyEngine\Renderable\CellMode">
+      <UniqueIdentifier>{7f673314-c192-4448-ad39-1532575542df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="glad.c">
@@ -206,6 +209,15 @@
       <Filter>MyEngine\Renderable</Filter>
     </ClInclude>
     <ClInclude Include="CellInfo.hpp">
+      <Filter>Topology\Info\CellMode</Filter>
+    </ClInclude>
+    <ClInclude Include="CellRenderer.hpp">
+      <Filter>MyEngine\Renderable\CellMode</Filter>
+    </ClInclude>
+    <ClInclude Include="RayRenderer.hpp">
+      <Filter>MyEngine\Renderable\CellMode</Filter>
+    </ClInclude>
+    <ClInclude Include="RayInfo.hpp">
       <Filter>Topology\Info\CellMode</Filter>
     </ClInclude>
   </ItemGroup>

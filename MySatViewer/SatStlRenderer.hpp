@@ -41,7 +41,7 @@ namespace MyRenderEngine {
 
 				s->setMatrix4("projection", renderInfo.projectionMatrix);
 				s->setMatrix4("view", renderInfo.viewMatrix);
-				s->setMatrix4("model", modelMatrix);
+				s->setMatrix4("model", glm::scale(modelMatrix, glm::vec3(renderInfo.scaleFactor)));
 				s->setVec3("viewPos", renderInfo.cameraPos);
 
 				glBindVertexArray(VAO);

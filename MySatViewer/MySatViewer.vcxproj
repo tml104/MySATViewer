@@ -159,6 +159,7 @@
     <ClInclude Include="BasicGuiRenderer.hpp" />
     <ClInclude Include="camera.h" />
     <ClInclude Include="CellInfo.hpp" />
+    <ClInclude Include="CellRenderer.hpp" />
     <ClInclude Include="Configs.hpp" />
     <ClInclude Include="DebugShowGuiRenderer.hpp" />
     <ClInclude Include="DebugShowInfo.hpp" />
@@ -176,6 +177,8 @@
     <ClInclude Include="ObjLineRenderer.hpp" />
     <ClInclude Include="ObjMarkNum.hpp" />
     <ClInclude Include="ObjRenderer.hpp" />
+    <ClInclude Include="RayInfo.hpp" />
+    <ClInclude Include="RayRenderer.hpp" />
     <ClInclude Include="RenderInfo.hpp" />
     <ClInclude Include="SatGuiRenderer.hpp" />
     <ClInclude Include="SatInfo.hpp" />

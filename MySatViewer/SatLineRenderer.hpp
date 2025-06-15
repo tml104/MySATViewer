@@ -30,7 +30,8 @@ namespace MyRenderEngine {
 
 			shader->setMatrix4("projection", renderInfo.projectionMatrix);
 			shader->setMatrix4("view", renderInfo.viewMatrix);
-			shader->setMatrix4("model", modelMatrix);
+			shader->setMatrix4("model", glm::scale(modelMatrix, glm::vec3(renderInfo.scaleFactor)));
+
 			//shader.setVec3("viewPos", camera_pos);
 
 			// Öð¸ö»æÖÆÏß

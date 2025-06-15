@@ -35,6 +35,8 @@
 #include "SatInfo.hpp"
 #include "ObjInfo.hpp"
 #include "DebugShowInfo.hpp"
+#include "CellInfo.hpp"
+#include "RayInfo.hpp"
 
 #include "ObjMarkNum.hpp"
 
@@ -48,6 +50,9 @@
 
 #include "DebugShowRenderer.hpp"
 #include "DebugShowGuiRenderer.hpp"
+
+#include "CellRenderer.hpp"
+#include "RayRenderer.hpp"
 
 using json = nlohmann::json;
 
@@ -63,6 +68,11 @@ const string VERSION = COMPILE_DATETIME;
 // -o -p ./models/bunny.obj -d ./models/A_ent1(1)_cf_debugshow.json
 
 // -s -p ./models/A_ent1(1)_cf_stl_0.stl -g ./models/A_ent1(1)_cf_geometry_json_0.json -d ./models/A_ent1(1)_cf_debugshow.json
+
+// -s -p ./models/compare_case/A_ent1(1)_cf_stl_0.stl -g ./models/compare_case/A_ent1(1)_cf_geometry_json_0.json -d ./models/compare_case/A_ent1(1)_cf_debugshow.json
+
+// -m cell -p ./models/cell_mode/KDOPTriangles.stl --cell ./models/cell_mode/cell_json.json --meshbox ./models/cell_mode/meshbox_json.json --rays ./models/cell_mode/rays_json.json
+
 
 void SetSpdlogPattern(std::string file_name = "default")
 {
@@ -97,6 +107,9 @@ int main(int argc, char const* argv[])
         .add_option<std::string>("-p", "--path", "OBJ or STL Path", "")
         .add_option<std::string>("-g", "--geometry", "(Only For STL) Geometry File Path", "")
 		.add_option<std::string>("-d", "--debugshow", "DebugShow File Path", "")
+        .add_option<std::string>("", "--cell", "Cell Json File Path", "")
+        .add_option<std::string>("", "--meshbox", "Meshbox Json File Path", "")
+        .add_option<std::string>("", "--rays", "Rays Json File Path", "")
         .parse(argc, argv);
 
     // 模式
@@ -109,6 +122,10 @@ int main(int argc, char const* argv[])
     std::string model_path = args_parser.get_option<std::string>("-p");
     std::string geometry_path = args_parser.get_option<std::string>("-g");
 	std::string debugshow_path = args_parser.get_option<std::string>("-d");
+
+    std::string cell_json_path = args_parser.get_option<std::string>("--cell");
+    std::string meshbox_json_path = args_parser.get_option<std::string>("--meshbox");
+    std::string rays_json_path = args_parser.get_option<std::string>("--rays");
 
     // parse args END
 
@@ -141,6 +158,10 @@ int main(int argc, char const* argv[])
     Info::SatInfo satInfo;
     Info::ObjInfo objInfo;// 注意这两个对象的生命周期. 这里不能把这两个对象挪到if里面，因为目前objRendererPtr是通过引用的方式拿信息的！
     Info::DebugShowInfo debugShowInfo;
+
+    Info::CellInfo cellInfo;
+    Info::CellInfo meshboxInfo;
+    Info::RayInfo rayInfo;
 
     if (mode == "obj") {
         std::cout << "Loading OBJ: " << model_path << std::endl;
@@ -188,8 +209,44 @@ int main(int argc, char const* argv[])
         myRenderEngine.AddGuiRenderable(myGuiRendererPtr);
 	}
 	else if (mode == "cell") {
-		SPDLOG_ERROR("Cell mode is not implemented yet.");
-		return -1;
+        // 先暂时用sat的代替？
+
+        if (model_path != "")
+        {
+            std::cout << "Loading STL: " << model_path << std::endl;
+            satInfo.LoadStl(model_path);
+            std::cout << "Loading STL Done." << std::endl;
+        }
+
+        std::cout << "Loading Cell Json: " << cell_json_path << std::endl;
+        cellInfo.LoadFromCellBoxJson(cell_json_path);
+        std::cout << "Loading Cell Json Done." << std::endl;
+
+        std::cout << "Loading Meshbox Json: " << meshbox_json_path << std::endl;
+        meshboxInfo.LoadFromCellBoxJson(meshbox_json_path);
+        std::cout << "Loading Meshbox Json Done." << std::endl;
+
+        std::cout << "Loading Ray Json:" << rays_json_path << std::endl;
+        rayInfo.LoadFromRayJson(rays_json_path);
+        std::cout << "Loading Ray Json Done." << std::endl;
+
+        myRenderEngine.SetCameraPos(satInfo.newCameraPos);
+
+        auto satStlRendererPtr = std::make_shared<MyRenderEngine::SatStlRenderer>(&(stlShader), &(stlTransparentShader));
+        satStlRendererPtr->LoadFromSatInfo(satInfo);
+        myRenderEngine.AddOpaqueOrTransparentRenderable(satStlRendererPtr);
+
+        auto cellRendererPtr = std::make_shared<MyRenderEngine::CellRenderer>(&lineShader);
+        cellRendererPtr->LoadFromCellInfo(cellInfo, glm::vec3{ 0.0f, 0.0f, 1.0f });
+        myRenderEngine.AddOpaqueRenderable(cellRendererPtr);
+
+        auto meshboxRendererPtr = std::make_shared<MyRenderEngine::CellRenderer>(&lineShader);
+        meshboxRendererPtr->LoadFromCellInfo(meshboxInfo, glm::vec3{ 1.0f, 1.0f, 0.0f });
+        myRenderEngine.AddOpaqueRenderable(meshboxRendererPtr);
+
+        auto rayRendererPtr = std::make_shared<MyRenderEngine::RayRenderer>(&lineShader);
+        rayRendererPtr->LoadFromRayInfo(rayInfo);
+        myRenderEngine.AddOpaqueRenderable(rayRendererPtr);
 	}
 	else {
 		SPDLOG_ERROR("Unknown mode: {}", mode);
